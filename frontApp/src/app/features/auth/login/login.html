@@ -1,0 +1,126 @@
+<div class="w-full h-full min-h-screen flex flex-col md:flex-row relative overflow-hidden">
+  
+  <!-- Partie gauche -->
+  <div class="hidden md:flex md:w-1/2 bg-[#E5EEFF] relative flex-col items-center justify-center p-16 overflow-hidden">
+    <div class="absolute inset-0 bg-[linear-gradient(to_right,#e1e0ff_1px,transparent_1px),linear-gradient(to_bottom,#e1e0ff_1px,transparent_1px)] bg-[size:40px_40px] opacity-20 pointer-events-none"></div>
+    <div class="absolute inset-0 bg-gradient-to-br from-[#15157D]/10 via-[#E5EEFF] to-[#BB0013]/10 pointer-events-none"></div>
+    <div class="relative z-10 flex flex-col items-center max-w-lg text-center">
+      <div class="w-48 h-48 mb-8 rounded-full bg-white flex items-center justify-center shadow-xl overflow-hidden p-4 border-4 border-[#F5F7FA]">
+        <img alt="Logo CAB Informatique" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8rgURfwcatKeJFt-JpesFHaJsO5YEHmdUp0eeDPvCoknp367b5cNBEyZQ0_15HIJLop8R5VUwMsSr6vmBu99leElPqKRJtihl2nm7t0ncAiyQ5NEFwAR0aQgBgl8hEWfVTxMACwmqmyzpTM7q03Mbe03DkLD4gpu2AFJXgFl12H_pw-3FZROd02fRVyCDU2F-_y60lzf0XYlKy9XlJjB_eRLh4ayFvgBwO6T2VjUdUzegA5zPD1WNk-WGtgcgi5zpuIo"/>
+      </div>
+      <h2 class="text-4xl font-bold text-[#15157D] mb-2">CAB Informatique</h2>
+      <p class="text-lg text-[#464652]">Application de gestion du centre</p>
+    </div>
+  </div>
+
+  <!-- Partie droite -->
+  <div class="w-full md:w-1/2 h-full min-h-screen flex items-center justify-center bg-[#F5F7FA] p-4 md:p-20">
+    <div class="w-full max-w-[440px]">
+      
+      <!-- Logo mobile -->
+      <div class="w-24 h-24 mb-4 rounded-xl bg-white flex md:hidden items-center justify-center shadow-md overflow-hidden p-2 mx-auto">
+        <img alt="Logo CAB Informatique" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDT2DLJfZRFbADyhAuqrt2EcSV9Mu8LmLCKZRvBWKH4meGJDegwcoyp0dMeiHVEzxE3Ua8KguEkKYQ8WtNqq5X2IqBWANsmaDUnm_e4XIHVUUrQBXxXvMGJ3FFC5p_1RZicahkgDV50tJi7gbH05KeGrrqD67rfQtt7HoXzZww9PBQhTzUcqo2nL0H4NbZSO5mTsFyrNMGZqeIseYpLkPD1UA09u_8olJkEzbOWzaOuX-SMYmKhpAciJtRPynZuqxJHUtY"/>
+      </div>
+
+      <h1 class="text-2xl md:text-3xl font-bold text-[#1A1A3E] mb-1">Connexion</h1>
+      <p class="text-[#464652] text-base mb-6">Système de Gestion CAB Informatique</p>
+
+      <!-- Message d'erreur global (Backend) -->
+      @if (errorMessage()) {
+        <div class="mb-4 p-3 bg-red-50 border border-red-500 rounded-lg flex items-start gap-3">
+          <span class="material-symbols-outlined text-[#BA1A1A] mt-0.5 text-[20px]">error</span>
+          <p class="text-sm text-[#BA1A1A] m-0 leading-relaxed">{{ errorMessage() }}</p>
+        </div>
+      }
+
+      <form (ngSubmit)="onSubmit()" class="w-full">
+        <!-- Email -->
+        <div class="mb-4">
+          <label class="text-sm text-[#1A1A3E] font-semibold block mb-1">Adresse Email</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#777683]">mail</span>
+            <input 
+              type="email"
+              [(ngModel)]="email"
+              name="email"
+              (blur)="validateEmail()"
+              (input)="validateEmail()"
+              required
+              class="w-full bg-[#E5EEFF] outline-none ring-1 ring-[#C7C5D4] text-[#1A1A3E] rounded-lg p-3 pl-10 focus:ring-2 focus:ring-[#15157D] focus:bg-white transition-all"
+              placeholder="prenom.nom@cab-informatique.fr"
+            />
+          </div>
+          @if (emailError()) {
+            <p class="text-sm text-[#BA1A1A] mt-1">{{ emailError() }}</p>
+          }
+        </div>
+
+        <!-- Mot de passe -->
+        <div class="mb-4">
+          <label class="text-sm text-[#1A1A3E] font-semibold block mb-1">Mot de passe</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#777683]">lock</span>
+            <input 
+              [type]="showPassword() ? 'text' : 'password'"
+              [(ngModel)]="password"
+              name="password"
+              (blur)="validatePassword()"
+              (input)="validatePassword()"
+              required
+              class="w-full bg-[#E5EEFF] outline-none ring-1 ring-[#C7C5D4] text-[#1A1A3E] rounded-lg p-3 pl-10 pr-10 focus:ring-2 focus:ring-[#15157D] focus:bg-white transition-all"
+              placeholder="••••••••"
+            />
+            <button 
+              type="button"
+              (click)="togglePassword()"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-[#777683] hover:text-[#1A1A3E]"
+            >
+              <span class="material-symbols-outlined text-[20px]">
+                {{ showPassword() ? 'visibility_off' : 'visibility' }}
+              </span>
+            </button>
+          </div>
+          @if (passwordError()) {
+            <p class="text-sm text-[#BA1A1A] mt-1">{{ passwordError() }}</p>
+          }
+        </div>
+
+        <!-- Options -->
+        <div class="flex justify-between items-center mt-2">
+          <label class="flex items-center gap-2 cursor-pointer group">
+            <input type="checkbox" class="peer sr-only"/>
+            <div class="w-5 h-5 rounded border border-[#777683] flex items-center justify-center peer-checked:bg-[#15157D] peer-checked:border-[#15157D] transition-all">
+              <span class="material-symbols-outlined text-[16px] text-white opacity-0 peer-checked:opacity-100" style="font-variation-settings: 'FILL' 1;">check</span>
+            </div>
+            <span class="text-sm text-[#464652] group-hover:text-[#1A1A3E] transition-colors">Se souvenir de moi</span>
+          </label>
+          <a routerLink="/forgot-password" class="text-sm text-[#15157D] font-medium hover:underline">Mot de passe oublié ?</a>
+        </div>
+
+        <!-- Bouton -->
+        <button 
+          type="submit"
+          [disabled]="loading()"
+          class="w-full bg-[#15157D] text-white text-base font-semibold py-3 rounded-lg mt-4 hover:bg-[#2E3192] focus:outline-none focus:ring-2 focus:ring-[#15157D] focus:ring-offset-2 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span class="flex items-center justify-center gap-2">
+            @if (loading()) {
+              Connexion en cours...
+            } @else {
+              Se connecter
+            }
+            <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+          </span>
+        </button>
+
+        <!-- Sécurité -->
+        <div class="mt-4 p-3 bg-[#EFF4FF] border border-[#C7C5D4] rounded-lg flex items-start gap-3">
+          <span class="material-symbols-outlined text-[#BB0013] mt-0.5 text-[20px]">info</span>
+          <p class="text-xs text-[#464652] m-0 leading-relaxed">
+            <strong>Sécurité renforcée :</strong> 5 tentatives infructueuses entraînent un blocage temporaire du compte.
+          </p>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

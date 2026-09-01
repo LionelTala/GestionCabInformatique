@@ -1,0 +1,284 @@
+<div>
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 animate-fade-in-up" style="animation-delay: 0.1s;">
+    <div>
+      <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#15157D] text-3xl">corporate_fare</span>
+        Gestion des Campus
+      </h1>
+      <p class="text-[#6B7280] text-sm mt-1">Gérez les campus du centre de formation</p>
+    </div>
+    <button 
+      (click)="openCreateModal()"
+      class="bg-[#15157D] text-white px-5 py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm"
+    >
+      <span class="material-symbols-outlined text-lg">add</span>
+      Nouveau campus
+    </button>
+  </div>
+
+  <!-- Loader -->
+  @if (loading()) {
+    <div class="flex flex-col items-center justify-center py-20">
+      <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+      <p class="text-[#6B7280] mt-4 text-sm">Chargement des campus...</p>
+    </div>
+  } @else {
+    <!-- Grille des campus -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      @for (campus of campuses(); track campus.id; let i = $index) {
+        <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-6 hover:shadow-md hover:border-[#15157D]/20 transition-all duration-300 group animate-fade-in-up" [style.animation-delay]="(0.1 + (i * 0.05)) + 's'">
+          
+          <!-- En-tête carte -->
+          <div class="flex justify-between items-start">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+                <span class="material-symbols-outlined text-2xl">location_city</span>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-[#0B1C30]">{{ campus.name }}</h3>
+                <p class="text-[#6B7280] text-sm flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">location_on</span>
+                  {{ campus.city }}
+                </p>
+              </div>
+            </div>
+            <span 
+              [class.bg-green-100]="campus.is_active"
+              [class.text-green-700]="campus.is_active"
+              [class.bg-red-100]="!campus.is_active"
+              [class.text-red-700]="!campus.is_active"
+              class="px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1"
+            >
+              <span class="w-1.5 h-1.5 rounded-full" [class.bg-green-500]="campus.is_active" [class.bg-red-500]="!campus.is_active"></span>
+              {{ campus.is_active ? 'Actif' : 'Inactif' }}
+            </span>
+          </div>
+
+          <!-- Détails -->
+          <div class="mt-4 space-y-2">
+            @if (campus.address) {
+              <p class="text-sm text-[#6B7280] flex items-start gap-2">
+                <span class="material-symbols-outlined text-sm text-[#6B7280]">home</span>
+                {{ campus.address }}
+              </p>
+            }
+            @if (campus.phone) {
+              <p class="text-sm text-[#6B7280] flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm text-[#6B7280]">phone</span>
+                {{ campus.phone }}
+              </p>
+            }
+            @if (campus.email) {
+              <p class="text-sm text-[#6B7280] flex items-center gap-2 truncate">
+                <span class="material-symbols-outlined text-sm text-[#6B7280]">email</span>
+                {{ campus.email }}
+              </p>
+            }
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-1 mt-4 pt-4 border-t border-[#E5E7EB]">
+            <button 
+              (click)="toggleStatus(campus)"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg hover:bg-[#E8F0FE] text-[#6B7280] hover:text-[#15157D] transition-colors"
+            >
+              <span class="material-symbols-outlined text-sm">{{ campus.is_active ? 'pause' : 'play_arrow' }}</span>
+              {{ campus.is_active ? 'Désactiver' : 'Activer' }}
+            </button>
+            <button 
+              (click)="openEditModal(campus)"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg hover:bg-[#E8F0FE] text-[#6B7280] hover:text-[#15157D] transition-colors"
+            >
+              <span class="material-symbols-outlined text-sm">edit</span>
+              Modifier
+            </button>
+            <button 
+              (click)="deleteCampus(campus)"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg hover:bg-red-50 text-[#6B7280] hover:text-[#BB0013] transition-colors ml-auto"
+            >
+              <span class="material-symbols-outlined text-sm">delete</span>
+              Supprimer
+            </button>
+          </div>
+        </div>
+      } @empty {
+        <div class="col-span-full flex flex-col items-center justify-center py-20 text-[#6B7280]">
+          <span class="material-symbols-outlined text-6xl text-[#E5E7EB]">corporate_fare</span>
+          <p class="mt-4 font-medium">Aucun campus enregistré</p>
+          <p class="text-sm">Cliquez sur "Nouveau campus" pour en créer un</p>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Modal -->
+<!-- Modal -->
+@if (showModal()) {
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeModal()">
+    <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up" (click)="$event.stopPropagation()">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+            <span class="material-symbols-outlined text-2xl">
+              {{ isEditing() ? 'edit' : 'add_business' }}
+            </span>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-[#0B1C30]">
+              {{ isEditing() ? 'Modifier le campus' : 'Nouveau campus' }}
+            </h2>
+            <p class="text-sm text-[#6B7280]">
+              {{ isEditing() ? 'Modifiez les informations du campus' : 'Remplissez les informations du nouveau campus' }}
+            </p>
+          </div>
+        </div>
+        <button 
+          type="button"
+          (click)="closeModal()" 
+          class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Formulaire -->
+      <form (ngSubmit)="onSubmit()" #campusForm="ngForm">
+        <div class="space-y-4">
+          
+          <!-- Nom -->
+          <div>
+            <label class="block text-sm font-medium text-[#0B1C30] mb-1">
+              Nom du campus <span class="text-[#BB0013]">*</span>
+            </label>
+            <input 
+              type="text"
+              [(ngModel)]="formData().name"
+              name="name"
+              (blur)="validateName()"
+              (input)="validateName()"
+              class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+              [class.border-[#BB0013]]="errors().name"
+              [class.border-[#E5E7EB]]="!errors().name"
+              placeholder="Ex: Campus Douala"
+            />
+            @if (errors().name) {
+              <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">error</span>
+                {{ errors().name }}
+              </p>
+            }
+          </div>
+
+          <!-- Ville -->
+          <div>
+            <label class="block text-sm font-medium text-[#0B1C30] mb-1">
+              Ville <span class="text-[#BB0013]">*</span>
+            </label>
+            <input 
+              type="text"
+              [(ngModel)]="formData().city"
+              name="city"
+              (blur)="validateCity()"
+              (input)="validateCity()"
+              class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+              [class.border-[#BB0013]]="errors().city"
+              [class.border-[#E5E7EB]]="!errors().city"
+              placeholder="Ex: Douala"
+            />
+            @if (errors().city) {
+              <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">error</span>
+                {{ errors().city }}
+              </p>
+            }
+          </div>
+
+          <!-- Adresse -->
+          <div>
+            <label class="block text-sm font-medium text-[#0B1C30] mb-1">Adresse</label>
+            <textarea 
+              [(ngModel)]="formData().address"
+              name="address"
+              class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all resize-none"
+              placeholder="Adresse complète"
+              rows="2"
+            ></textarea>
+          </div>
+
+          <!-- Téléphone -->
+          <div>
+            <label class="block text-sm font-medium text-[#0B1C30] mb-1">Téléphone</label>
+            <input 
+              type="text"
+              [(ngModel)]="formData().phone"
+              name="phone"
+              (blur)="validatePhone()"
+              (input)="validatePhone()"
+              class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+              [class.border-[#BB0013]]="errors().phone"
+              [class.border-[#E5E7EB]]="!errors().phone"
+              placeholder="Ex: 699999999"
+            />
+            @if (errors().phone) {
+              <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">error</span>
+                {{ errors().phone }}
+              </p>
+            }
+          </div>
+
+          <!-- Email -->
+          <div>
+            <label class="block text-sm font-medium text-[#0B1C30] mb-1">Email</label>
+            <input 
+              type="email"
+              [(ngModel)]="formData().email"
+              name="email"
+              (blur)="validateEmail()"
+              (input)="validateEmail()"
+              class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+              [class.border-[#BB0013]]="errors().email"
+              [class.border-[#E5E7EB]]="!errors().email"
+              placeholder="Ex: campus@cab-informatique.com"
+            />
+            @if (errors().email) {
+              <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">error</span>
+                {{ errors().email }}
+              </p>
+            }
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-3 justify-end mt-6 pt-4 border-t border-[#E5E7EB]">
+          <button 
+            type="button"
+            (click)="closeModal()"
+            class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors"
+          >
+            Annuler
+          </button>
+          <button 
+            type="submit"
+            [disabled]="submitting()"
+            class="px-5 py-2.5 bg-[#15157D] text-white text-sm font-medium rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            @if (submitting()) {
+              <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              {{ isEditing() ? 'Modification...' : 'Création...' }}
+            } @else {
+              <span class="material-symbols-outlined text-sm">{{ isEditing() ? 'save' : 'add' }}</span>
+              {{ isEditing() ? 'Modifier' : 'Créer' }}
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+</div>

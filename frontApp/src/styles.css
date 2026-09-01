@@ -1,0 +1,23 @@
+/* You can add global styles to this file, and also import other style files */
+
+@import 'tailwindcss';
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Personnalisation Toastr */
+.toast-success {
+  background-color: #4CAF50 !important;
+}
+
+.toast-error {
+  background-color: #BA1A1A !important;
+}
+
+.toast-warning {
+  background-color: #FFA726 !important;
+}
+
+.toast-info {
+  background-color: #4F8FFF !important;
+}
