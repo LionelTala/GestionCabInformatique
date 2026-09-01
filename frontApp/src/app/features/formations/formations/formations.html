@@ -1,0 +1,323 @@
+<div>
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 animate-fade-in-up" style="animation-delay: 0.1s;">
+    <div>
+      <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#15157D] text-3xl">school</span>
+        Gestion des Formations
+      </h1>
+      <p class="text-[#6B7280] text-sm mt-1">Gérez les formations du centre de formation</p>
+    </div>
+    @if (canManage()) {
+      <button 
+        (click)="openCreateModal()"
+        class="bg-[#15157D] text-white px-5 py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm whitespace-nowrap"
+      >
+        <span class="material-symbols-outlined text-lg">add</span>
+        Nouvelle formation
+      </button>
+    }
+  </div>
+
+  <!-- Tableau -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="bg-[#F5F7FA] border-b border-[#E5E7EB]">
+            <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Abréviation</th>
+            <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Nom</th>
+            <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Frais</th>
+            <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Durée</th>
+            <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Statut</th>
+            @if (canManage()) {
+              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Actions</th>
+            }
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#E5E7EB]">
+          @for (formation of formations(); track formation.id; let i = $index) {
+            <tr class="hover:bg-[#F5F7FA] transition-colors animate-fade-in-up" [style.animation-delay]="(0.1 + (i * 0.03)) + 's'">
+              <td class="px-6 py-4">
+                <span class="font-semibold text-[#15157D]">{{ formation.abbreviation }}</span>
+              </td>
+              <td class="px-6 py-4 text-[#0B1C30]">{{ formation.name }}</td>
+              <td class="px-6 py-4 text-[#0B1C30] font-medium">{{ formatPrice(formation.tuition_fees) }}</td>
+              <td class="px-6 py-4 text-[#6B7280]">{{ formation.duration_months }} mois</td>
+              <td class="px-6 py-4">
+                <span 
+                  [class.bg-green-100]="formation.is_active"
+                  [class.text-green-700]="formation.is_active"
+                  [class.bg-red-100]="!formation.is_active"
+                  [class.text-red-700]="!formation.is_active"
+                  class="px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1 w-fit"
+                >
+                  <span class="w-1.5 h-1.5 rounded-full" [class.bg-green-500]="formation.is_active" [class.bg-red-500]="!formation.is_active"></span>
+                  {{ formation.is_active ? 'Actif' : 'Inactif' }}
+                </span>
+              </td>
+              @if (canManage()) {
+                <td class="px-6 py-4 text-right">
+                  <div class="flex items-center justify-end gap-0.5">
+                    <button 
+                      (click)="toggleStatus(formation)"
+                      class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#15157D] hover:text-[#2E3192] transition-colors"
+                      title="{{ formation.is_active ? 'Désactiver' : 'Activer' }}"
+                    >
+                      <span class="material-symbols-outlined text-xl">{{ formation.is_active ? 'pause_circle' : 'play_circle' }}</span>
+                    </button>
+                    <button 
+                      (click)="openEditModal(formation)"
+                      class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6C3CE1] hover:text-[#5A2CB8] transition-colors"
+                      title="Modifier"
+                    >
+                      <span class="material-symbols-outlined text-xl">edit</span>
+                    </button>
+                    <button 
+                      (click)="openDeleteModal(formation)"
+                      class="p-2 rounded-lg hover:bg-red-50 text-[#BB0013] hover:text-[#93000D] transition-colors"
+                      title="Supprimer"
+                    >
+                      <span class="material-symbols-outlined text-xl">delete</span>
+                    </button>
+                  </div>
+                </td>
+              }
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="text-center py-12 text-[#6B7280]">
+                <span class="material-symbols-outlined text-5xl text-[#E5E7EB] block mb-3">school</span>
+                <p>Aucune formation enregistrée</p>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal principal -->
+  @if (showModal()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeModal()">
+      <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up" (click)="$event.stopPropagation()">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+              <span class="material-symbols-outlined text-2xl">
+                {{ isEditing() ? 'edit' : 'school' }}
+              </span>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-[#0B1C30]">
+                {{ isEditing() ? 'Modifier la formation' : 'Nouvelle formation' }}
+              </h2>
+              <p class="text-sm text-[#6B7280]">
+                {{ isEditing() ? 'Modifiez les informations de la formation' : 'Remplissez les informations de la nouvelle formation' }}
+              </p>
+            </div>
+          </div>
+          <button 
+            type="button"
+            (click)="closeModal()" 
+            class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Formulaire -->
+        <form (ngSubmit)="onSubmit()">
+          <div class="space-y-4">
+            
+            <!-- Nom -->
+            <div>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">
+                Nom de la formation <span class="text-[#BB0013]">*</span>
+              </label>
+              <input 
+                type="text"
+                [(ngModel)]="formData().name"
+                name="name"
+                (blur)="validateName()"
+                (input)="validateName()"
+                class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                [class.border-[#BB0013]]="errors().name"
+                [class.border-[#E5E7EB]]="!errors().name"
+                placeholder="Ex: Développement Web Full Stack"
+              />
+              @if (errors().name) {
+                <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">error</span>
+                  {{ errors().name }}
+                </p>
+              }
+            </div>
+
+            <!-- Abréviation -->
+            <div>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">
+                Abréviation <span class="text-[#BB0013]">*</span>
+              </label>
+              <input 
+                type="text"
+                [(ngModel)]="formData().abbreviation"
+                name="abbreviation"
+                (blur)="validateAbbreviation()"
+                (input)="validateAbbreviation()"
+                class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all uppercase"
+                [class.border-[#BB0013]]="errors().abbreviation"
+                [class.border-[#E5E7EB]]="!errors().abbreviation"
+                placeholder="Ex: DWFS"
+              />
+              @if (errors().abbreviation) {
+                <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">error</span>
+                  {{ errors().abbreviation }}
+                </p>
+              }
+            </div>
+
+            <!-- Frais + Durée -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">
+                  Frais de scolarité <span class="text-[#BB0013]">*</span>
+                </label>
+                <input 
+                  type="number"
+                  [(ngModel)]="formData().tuition_fees"
+                  name="tuition_fees"
+                  (blur)="validateTuitionFees()"
+                  (input)="validateTuitionFees()"
+                  class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                  [class.border-[#BB0013]]="errors().tuition_fees"
+                  [class.border-[#E5E7EB]]="!errors().tuition_fees"
+                  placeholder="500000"
+                />
+                @if (errors().tuition_fees) {
+                  <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">error</span>
+                    {{ errors().tuition_fees }}
+                  </p>
+                }
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">
+                  Durée <span class="text-[#BB0013]">*</span>
+                </label>
+                <input 
+                  type="number"
+                  [(ngModel)]="formData().duration_months"
+                  name="duration_months"
+                  (blur)="validateDuration()"
+                  (input)="validateDuration()"
+                  class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                  [class.border-[#BB0013]]="errors().duration_months"
+                  [class.border-[#E5E7EB]]="!errors().duration_months"
+                  placeholder="12"
+                />
+                @if (errors().duration_months) {
+                  <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">error</span>
+                    {{ errors().duration_months }}
+                  </p>
+                }
+              </div>
+            </div>
+
+            <!-- Statut -->
+            <div>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <input 
+                  type="checkbox"
+                  [(ngModel)]="formData().is_active"
+                  name="is_active"
+                  class="w-4 h-4 text-[#15157D] border-[#E5E7EB] rounded focus:ring-[#15157D] focus:ring-2"
+                />
+                <span class="text-sm font-medium text-[#0B1C30] group-hover:text-[#15157D] transition-colors">
+                  Formation active
+                </span>
+              </label>
+              <p class="text-xs text-[#6B7280] mt-1 ml-7">
+                Si désactivée, la formation ne pourra plus être attribuée à de nouveaux étudiants.
+              </p>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex gap-3 justify-end mt-6 pt-4 border-t border-[#E5E7EB]">
+            <button 
+              type="button"
+              (click)="closeModal()"
+              class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors"
+            >
+              Annuler
+            </button>
+            <button 
+              type="submit"
+              [disabled]="submitting()"
+              class="px-5 py-2.5 bg-[#15157D] text-white text-sm font-medium rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              @if (submitting()) {
+                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                {{ isEditing() ? 'Modification...' : 'Création...' }}
+              } @else {
+                <span class="material-symbols-outlined text-sm">{{ isEditing() ? 'save' : 'add' }}</span>
+                {{ isEditing() ? 'Modifier' : 'Créer' }}
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal de confirmation de suppression -->
+  @if (showDeleteModal()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeDeleteModal()">
+      <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-slide-up" (click)="$event.stopPropagation()">
+        
+        <div class="flex flex-col items-center text-center">
+          <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-[#BB0013] mb-4">
+            <span class="material-symbols-outlined text-4xl">delete_forever</span>
+          </div>
+          
+          <h2 class="text-xl font-bold text-[#0B1C30]">Confirmer la suppression</h2>
+          <p class="text-[#6B7280] text-sm mt-2">
+            Êtes-vous sûr de vouloir supprimer la formation 
+            <span class="font-semibold text-[#0B1C30]">"{{ formationToDelete()?.name }}"</span> ?
+          </p>
+          <p class="text-xs text-[#6B7280] mt-1">Cette action est irréversible.</p>
+        </div>
+
+        <div class="flex gap-3 justify-center mt-6 pt-4 border-t border-[#E5E7EB]">
+          <button 
+            type="button"
+            (click)="closeDeleteModal()"
+            class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors"
+          >
+            Annuler
+          </button>
+          <button 
+            type="button"
+            (click)="confirmDelete()"
+            [disabled]="submitting()"
+            class="px-5 py-2.5 bg-[#BB0013] text-white text-sm font-medium rounded-xl hover:bg-[#93000D] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            @if (submitting()) {
+              <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              Suppression...
+            } @else {
+              <span class="material-symbols-outlined text-sm">delete</span>
+              Supprimer
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

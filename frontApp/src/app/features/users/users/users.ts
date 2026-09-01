@@ -27,6 +27,15 @@ export class Users implements OnInit {
   loading = signal(true);
   submitting = signal(false);
 
+  // Modal principal
+  showModal = signal(false);
+  isEditing = signal(false);
+  selectedUser = signal<User | null>(null);
+
+  // Modal de confirmation
+  showDeleteModal = signal(false);
+  userToDelete = signal<User | null>(null);
+
   errors = signal({
     first_name: '',
     last_name: '',
@@ -61,10 +70,6 @@ export class Users implements OnInit {
         return [];
     }
   });
-
-  showModal = signal(false);
-  isEditing = signal(false);
-  selectedUser = signal<User | null>(null);
 
   formData = signal({
     first_name: '',
@@ -175,7 +180,7 @@ export class Users implements OnInit {
     return isFirstNameValid && isLastNameValid && isEmailValid && isPhoneValid && isPasswordValid && isCampusValid;
   }
 
-  // === MODAL ===
+  // === MODAL PRINCIPAL ===
   openCreateModal() {
     this.isEditing.set(false);
     this.selectedUser.set(null);
@@ -198,7 +203,6 @@ export class Users implements OnInit {
     this.selectedUser.set(user);
     this.errors.set({ first_name: '', last_name: '', email: '', phone: '', password: '', campus_id: '' });
 
-    // Garder le rôle actuel de l'utilisateur
     const currentRole = user.role;
 
     this.formData.set({
@@ -238,12 +242,10 @@ export class Users implements OnInit {
         is_active: data.is_active
       };
 
-      // Ajouter le rôle seulement s'il est présent et différent
       if (data.role) {
         updateData.role = data.role as UserRole;
       }
 
-      // Ajouter campus_id si présent
       if (data.campus_id) {
         updateData.campus_id = data.campus_id;
       }
@@ -296,6 +298,36 @@ export class Users implements OnInit {
     }
   }
 
+  // === MODAL DE CONFIRMATION SUPPRESSION ===
+  openDeleteModal(user: User) {
+    this.userToDelete.set(user);
+    this.showDeleteModal.set(true);
+  }
+
+  closeDeleteModal() {
+    this.showDeleteModal.set(false);
+    this.userToDelete.set(null);
+  }
+
+  confirmDelete() {
+    const user = this.userToDelete();
+    if (!user) return;
+
+    this.submitting.set(true);
+    this.userService.delete(user.id).subscribe({
+      next: () => {
+        this.toastr.success('Utilisateur supprimé avec succès');
+        this.closeDeleteModal();
+        this.userService.refresh();
+        this.submitting.set(false);
+      },
+      error: (err) => {
+        this.toastr.error(err.error?.message || 'Erreur lors de la suppression');
+        this.submitting.set(false);
+      }
+    });
+  }
+
   toggleStatus(user: User) {
     this.userService.toggleStatus(user.id).subscribe({
       next: () => {
@@ -305,22 +337,6 @@ export class Users implements OnInit {
       },
       error: (err) => {
         this.toastr.error(err.error?.message || 'Erreur lors du changement de statut');
-      }
-    });
-  }
-
-  deleteUser(user: User) {
-    if (!confirm(`Voulez-vous vraiment supprimer l'utilisateur "${user.first_name} ${user.last_name}" ?`)) {
-      return;
-    }
-
-    this.userService.delete(user.id).subscribe({
-      next: () => {
-        this.toastr.success('Utilisateur supprimé avec succès');
-        this.userService.refresh();
-      },
-      error: (err) => {
-        this.toastr.error(err.error?.message || 'Erreur lors de la suppression');
       }
     });
   }

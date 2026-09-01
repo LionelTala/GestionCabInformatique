@@ -19,11 +19,15 @@ export class CampusManagement implements OnInit {
   loading = signal(true);
   submitting = signal(false);
 
+  // Modal principal
   showModal = signal(false);
   isEditing = signal(false);
   selectedCampus = signal<CampusType | null>(null);
 
-  // Erreurs de validation
+  // Modal de confirmation
+  showDeleteModal = signal(false);
+  campusToDelete = signal<CampusType | null>(null);
+
   errors = signal({
     name: '',
     city: '',
@@ -109,7 +113,7 @@ export class CampusManagement implements OnInit {
     return isNameValid && isCityValid && isEmailValid && isPhoneValid;
   }
 
-  // === MODAL ===
+  // === MODAL PRINCIPAL ===
   openCreateModal() {
     this.isEditing.set(false);
     this.selectedCampus.set(null);
@@ -183,6 +187,36 @@ export class CampusManagement implements OnInit {
     }
   }
 
+  // === MODAL DE CONFIRMATION SUPPRESSION ===
+  openDeleteModal(campus: CampusType) {
+    this.campusToDelete.set(campus);
+    this.showDeleteModal.set(true);
+  }
+
+  closeDeleteModal() {
+    this.showDeleteModal.set(false);
+    this.campusToDelete.set(null);
+  }
+
+  confirmDelete() {
+    const campus = this.campusToDelete();
+    if (!campus) return;
+
+    this.submitting.set(true);
+    this.campusService.delete(campus.id).subscribe({
+      next: () => {
+        this.toastr.success('Campus supprimé avec succès');
+        this.closeDeleteModal();
+        this.loadCampuses();
+        this.submitting.set(false);
+      },
+      error: (err) => {
+        this.toastr.error(err.error?.message || 'Erreur lors de la suppression');
+        this.submitting.set(false);
+      }
+    });
+  }
+
   toggleStatus(campus: CampusType) {
     this.campusService.toggleStatus(campus.id).subscribe({
       next: () => {
@@ -192,22 +226,6 @@ export class CampusManagement implements OnInit {
       },
       error: (err) => {
         this.toastr.error(err.error?.message || 'Erreur lors du changement de statut');
-      }
-    });
-  }
-
-  deleteCampus(campus: CampusType) {
-    if (!confirm(`Voulez-vous vraiment supprimer le campus "${campus.name}" ?`)) {
-      return;
-    }
-
-    this.campusService.delete(campus.id).subscribe({
-      next: () => {
-        this.toastr.success('Campus supprimé avec succès');
-        this.loadCampuses();
-      },
-      error: (err) => {
-        this.toastr.error(err.error?.message || 'Erreur lors de la suppression');
       }
     });
   }

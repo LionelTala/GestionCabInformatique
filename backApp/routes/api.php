@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\AcademicYearController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CampusController;
+use App\Http\Controllers\Api\FormationController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -40,5 +42,20 @@ Route::prefix('v1')->group(function () {
             Route::delete('/campuses/{id}', [CampusController::class, 'destroy']);
             Route::patch('/campuses/{id}/toggle-status', [CampusController::class, 'toggleStatus']);
         });
+        // Années scolaires
+        Route::get('/academic-years', [AcademicYearController::class, 'index']);
+        Route::get('/academic-years/{id}', [AcademicYearController::class, 'show']);
+        Route::post('/academic-years', [AcademicYearController::class, 'store']);
+        Route::put('/academic-years/{id}', [AcademicYearController::class, 'update']);
+        Route::delete('/academic-years/{id}', [AcademicYearController::class, 'destroy']);
+        Route::patch('/academic-years/switch', [AcademicYearController::class, 'switchYear']);
+
+        //Formations
+        Route::get('/formations', [FormationController::class, 'index']);
+        Route::get('/formations/{id}', [FormationController::class, 'show']);
+        Route::post('/formations', [FormationController::class, 'store']);
+        Route::put('/formations/{id}', [FormationController::class, 'update']);
+        Route::delete('/formations/{id}', [FormationController::class, 'destroy']);
+        Route::patch('/formations/{id}/toggle-status', [FormationController::class, 'toggleStatus']);
     });
 });

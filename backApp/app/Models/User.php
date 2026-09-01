@@ -19,6 +19,7 @@ class User extends Authenticatable
         'phone',
         'role',
         'campus_id',
+        'academic_year_id',
         'is_active',
         'last_login_at',
     ];
@@ -37,10 +38,15 @@ class User extends Authenticatable
         ];
     }
 
-    // Relation avec Campus
+    // Relations
     public function campus()
     {
         return $this->belongsTo(Campus::class);
+    }
+
+    public function academicYear()
+    {
+        return $this->belongsTo(AcademicYear::class);
     }
 
     // Vérification des rôles

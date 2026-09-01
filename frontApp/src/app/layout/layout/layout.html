@@ -3,22 +3,18 @@
   <div class="fixed inset-0 bg-[#0B1C30]/30 backdrop-blur-md z-[999] flex items-center justify-center animate-fade-in">
     <div class="bg-white/90 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-[0_20px_50px_rgba(21,21,125,0.15)] flex flex-col items-center animate-scale-up">
       
-      <!-- Double anneau animé -->
       <div class="relative w-14 h-14 flex items-center justify-center">
-        <!-- Anneau de fond subtil -->
         <div class="absolute inset-0 border-4 border-[#15157D]/10 rounded-full"></div>
-        <!-- Anneau principal en rotation -->
         <div class="absolute inset-0 border-4 border-transparent border-t-[#15157D] border-r-[#15157D] rounded-full animate-spin"></div>
-        <!-- Point central pulsé (optionnel pour le style) -->
         <div class="w-3 h-3 bg-[#15157D] rounded-full animate-pulse"></div>
       </div>
 
-      <!-- Texte avec une police plus soignée et couleur du thème -->
       <p class="text-[#0B1C30] mt-4 text-sm font-semibold tracking-wide">Chargement en cours...</p>
       <p class="text-[#6B7280] text-xs mt-0.5">Veuillez patienter un instant</p>
     </div>
   </div>
 }
+
 <div class="min-h-screen bg-[#F8F9FF]">
   
   <!-- Sidebar -->
@@ -28,39 +24,44 @@
   >
     <!-- Logo -->
     <div class="px-6 py-5 flex items-center gap-3 border-b border-[#E5E7EB]">
-      <div class="h-8 w-8 bg-[#15157D] rounded-lg flex items-center justify-center text-white font-bold text-sm">AB</div>
-      <span class="text-[#15157D] text-lg font-bold">CAB Admin</span>
-      <button (click)="toggleSidebar()" class="ml-auto md:hidden text-[#6B7280]">
+      <div class="h-10 w-10 bg-gradient-to-br from-[#15157D] to-[#2E3192] rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md">
+        AB
+      </div>
+      <div>
+        <span class="text-[#15157D] text-lg font-bold block leading-tight">CAB Admin</span>
+        <span class="text-[#6B7280] text-xs">Système de gestion</span>
+      </div>
+      <button (click)="toggleSidebar()" class="ml-auto md:hidden text-[#6B7280] hover:text-[#15157D] transition-colors">
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
 
-     <!-- Navigation dynamique filtrée -->
-    <nav class="flex-1 px-4 py-4 space-y-1">
-    @for (item of visibleNavItems(); track item.route) {
+    <!-- Navigation dynamique filtrée -->
+    <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+      @for (item of visibleNavItems(); track item.route) {
         <a 
-        [routerLink]="[item.route]"
-        routerLinkActive="bg-[#E1E0FF] text-[#15157D] font-bold"
-        [class.text-[#464652]]="!isActive(item.route)"
-        class="flex items-center px-4 py-3 rounded-lg hover:bg-[#E5EEFF] hover:text-[#0B1C30] transition-all"
+          [routerLink]="[item.route]"
+          routerLinkActive="bg-[#E1E0FF] text-[#15157D] font-bold"
+          [class.text-[#464652]]="!isActive(item.route)"
+          class="flex items-center px-4 py-3 rounded-lg hover:bg-[#E5EEFF] hover:text-[#0B1C30] transition-all group"
         >
-        <span class="material-symbols-outlined mr-3">{{ item.icon }}</span>
-        {{ item.label }}
+          <span class="material-symbols-outlined mr-3 group-hover:scale-110 transition-transform">{{ item.icon }}</span>
+          {{ item.label }}
         </a>
-    }
+      }
     </nav>
 
     <!-- Profil -->
     <div class="p-4 border-t border-[#E5E7EB]">
-      <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-[#E5EEFF] transition-colors cursor-pointer" (click)="logout()">
-        <div class="w-9 h-9 rounded-full bg-[#15157D] flex items-center justify-center text-white text-sm font-bold">
+      <div class="flex items-center gap-3 p-3 rounded-xl bg-[#F5F7FA] hover:bg-[#E5EEFF] transition-colors cursor-pointer" (click)="logout()">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#15157D] to-[#2E3192] flex items-center justify-center text-white text-sm font-bold shadow-md">
           {{ user()?.first_name?.[0] }}{{ user()?.last_name?.[0] }}
         </div>
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium text-[#0B1C30] truncate">{{ user()?.first_name }} {{ user()?.last_name }}</p>
+          <p class="text-sm font-semibold text-[#0B1C30] truncate">{{ user()?.first_name }} {{ user()?.last_name }}</p>
           <p class="text-xs text-[#6B7280] truncate">{{ user()?.role }}</p>
         </div>
-        <span class="material-symbols-outlined text-[#6B7280] text-sm">logout</span>
+        <span class="material-symbols-outlined text-[#6B7280] text-sm hover:text-[#BB0013] transition-colors">logout</span>
       </div>
     </div>
   </aside>
@@ -74,27 +75,102 @@
   <div class="md:pl-72">
     
     <!-- Header -->
-    <header class="sticky top-0 z-30 h-16 bg-[#F8F9FF]/80 backdrop-blur-xl flex items-center justify-between px-4 border-b border-[#E5E7EB]">
-      <div class="flex items-center gap-3">
-        <button (click)="toggleSidebar()" class="md:hidden text-[#0B1C30]">
-          <span class="material-symbols-outlined">menu</span>
-        </button>
-        <h1 class="text-lg font-bold text-[#0B1C30]">AB Informatique</h1>
+    <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[#E5E7EB]">
+      <div class="flex items-center justify-between px-6 h-20">
+        
+        <!-- Gauche -->
+        <div class="flex items-center gap-4">
+          <button (click)="toggleSidebar()" class="md:hidden text-[#0B1C30] p-2 hover:bg-[#F5F7FA] rounded-lg transition-colors">
+            <span class="material-symbols-outlined">menu</span>
+          </button>
+          
+          <div>
+            <h1 class="text-xl font-bold text-[#0B1C30]">AB Informatique</h1>
+            <p class="text-xs text-[#6B7280] hidden sm:block">Centre de Formation</p>
+          </div>
+        </div>
+
+        <!-- Centre - Dropdown Année stylé -->
+        <div class="hidden md:flex items-center gap-3 bg-[#F5F7FA] px-5 py-2.5 rounded-xl border border-[#E5E7EB] hover:border-[#15157D]/30 transition-all">
+          <span class="material-symbols-outlined text-[#15157D] text-base">event_note</span>
+          <span class="text-sm font-medium text-[#6B7280]">Année :</span>
+          <div class="relative">
+            <select 
+              [value]="currentYearId()"
+              (change)="switchYear($any($event.target).value)"
+              [disabled]="isSwitching()"
+              class="appearance-none bg-transparent text-base font-semibold text-[#15157D] focus:outline-none cursor-pointer pr-8 py-0.5 disabled:opacity-50"
+            >
+              @for (year of years(); track year.id) {
+                <option [value]="year.id" [class.font-bold]="year.is_current">
+                  {{ year.label }}
+                </option>
+              }
+            </select>
+            <span class="material-symbols-outlined absolute right-0 top-1/2 -translate-y-1/2 text-[#6B7280] text-lg pointer-events-none">expand_more</span>
+          </div>
+          @if (canManageYears()) {
+            <a routerLink="/academic-years" class="p-1 rounded-lg hover:bg-[#E8F0FE] text-[#6B7280] hover:text-[#15157D] transition-colors" title="Gérer les années">
+              <span class="material-symbols-outlined text-sm">settings</span>
+            </a>
+          }
+        </div>
+
+        <!-- Droite -->
+        <div class="flex items-center gap-3">
+          
+          <!-- Notifications -->
+          <div class="relative">
+            <button class="p-2.5 rounded-xl hover:bg-[#F5F7FA] transition-colors relative">
+              <span class="material-symbols-outlined text-[#6B7280]">notifications</span>
+              <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-[#BB0013] rounded-full border-2 border-white animate-pulse"></span>
+            </button>
+          </div>
+
+          <!-- Séparateur -->
+          <div class="h-8 w-px bg-[#E5E7EB] hidden sm:block"></div>
+
+          <!-- Profil utilisateur -->
+          <div class="flex items-center gap-3 cursor-pointer group">
+            <div class="relative">
+              <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#15157D] to-[#2E3192] flex items-center justify-center text-white text-sm font-bold shadow-md group-hover:shadow-lg transition-shadow">
+                {{ user()?.first_name?.[0] }}{{ user()?.last_name?.[0] }}
+              </div>
+              <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+            </div>
+            <div class="hidden sm:block">
+              <p class="text-sm font-semibold text-[#0B1C30] leading-tight">{{ user()?.first_name }} {{ user()?.last_name }}</p>
+              <p class="text-xs text-[#6B7280]">{{ user()?.role }}</p>
+            </div>
+            <button (click)="logout()" class="p-2 rounded-xl hover:bg-[#F5F7FA] transition-colors text-[#6B7280] hover:text-[#BB0013]" title="Déconnexion">
+              <span class="material-symbols-outlined text-sm">logout</span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <button class="relative p-1.5 text-[#6B7280] hover:bg-[#E5EEFF] rounded-full transition-colors">
-          <span class="material-symbols-outlined text-xl">notifications</span>
-          <span class="absolute top-1 right-1 w-2 h-2 bg-[#BB0013] rounded-full"></span>
-        </button>
-        <button class="p-1.5 text-[#6B7280] hover:bg-[#E5EEFF] rounded-full transition-colors md:hidden" (click)="logout()">
-          <span class="material-symbols-outlined text-xl">logout</span>
-        </button>
+      <!-- Version mobile du dropdown année -->
+      <div class="md:hidden px-6 pb-3 flex items-center gap-2 bg-white/80">
+        <span class="material-symbols-outlined text-[#15157D] text-sm">event_note</span>
+        <span class="text-sm font-medium text-[#6B7280]">Année :</span>
+        <div class="relative flex-1 max-w-[180px]">
+          <select 
+            [value]="currentYearId()"
+            (change)="switchYear($any($event.target).value)"
+            [disabled]="isSwitching()"
+            class="appearance-none bg-[#F5F7FA] text-sm font-semibold text-[#15157D] focus:outline-none cursor-pointer pr-7 py-1.5 rounded-lg px-3 w-full disabled:opacity-50 border border-[#E5E7EB]"
+          >
+            @for (year of years(); track year.id) {
+              <option [value]="year.id">{{ year.label }}</option>
+            }
+          </select>
+          <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[#6B7280] text-sm pointer-events-none">expand_more</span>
+        </div>
       </div>
     </header>
 
     <!-- Page content -->
-    <main class="p-4">
+    <main class="p-6">
       <router-outlet></router-outlet>
     </main>
   </div>

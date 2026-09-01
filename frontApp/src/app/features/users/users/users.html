@@ -88,27 +88,28 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 text-right">
-                  <div class="flex items-center justify-end gap-1">
+                  <!-- Actions - Icônes avec couleurs directes -->
+                  <div class="flex items-center justify-end gap-0.5">
                     <button 
                       (click)="toggleStatus(user)"
-                      class="p-1.5 rounded-lg hover:bg-[#E8F0FE] text-[#6B7280] hover:text-[#15157D] transition-colors"
+                      class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#15157D] hover:text-[#2E3192] transition-colors"
                       title="{{ user.is_active ? 'Désactiver' : 'Activer' }}"
                     >
-                      <span class="material-symbols-outlined text-sm">{{ user.is_active ? 'pause' : 'play_arrow' }}</span>
+                      <span class="material-symbols-outlined text-xl">{{ user.is_active ? 'pause_circle' : 'play_circle' }}</span>
                     </button>
                     <button 
                       (click)="openEditModal(user)"
-                      class="p-1.5 rounded-lg hover:bg-[#E8F0FE] text-[#6B7280] hover:text-[#15157D] transition-colors"
+                      class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6C3CE1] hover:text-[#5A2CB8] transition-colors"
                       title="Modifier"
                     >
-                      <span class="material-symbols-outlined text-sm">edit</span>
+                      <span class="material-symbols-outlined text-xl">edit</span>
                     </button>
                     <button 
-                      (click)="deleteUser(user)"
-                      class="p-1.5 rounded-lg hover:bg-red-50 text-[#6B7280] hover:text-[#BB0013] transition-colors"
+                      (click)="openDeleteModal(user)"
+                      class="p-2 rounded-lg hover:bg-red-50 text-[#BB0013] hover:text-[#93000D] transition-colors"
                       title="Supprimer"
                     >
-                      <span class="material-symbols-outlined text-sm">delete</span>
+                      <span class="material-symbols-outlined text-xl">delete</span>
                     </button>
                   </div>
                 </td>
@@ -126,6 +127,53 @@
       </div>
     </div>
   }
+
+  <!-- Modal de confirmation de suppression -->
+@if (showDeleteModal()) {
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeDeleteModal()">
+    <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-slide-up" (click)="$event.stopPropagation()">
+      
+      <!-- Icone -->
+      <div class="flex flex-col items-center text-center">
+        <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-[#BB0013] mb-4">
+          <span class="material-symbols-outlined text-4xl">delete_forever</span>
+        </div>
+        
+        <h2 class="text-xl font-bold text-[#0B1C30]">Confirmer la suppression</h2>
+        <p class="text-[#6B7280] text-sm mt-2">
+          Êtes-vous sûr de vouloir supprimer l'utilisateur 
+          <span class="font-semibold text-[#0B1C30]">"{{ userToDelete()?.first_name }} {{ userToDelete()?.last_name }}"</span> ?
+        </p>
+        <p class="text-xs text-[#6B7280] mt-1">Cette action est irréversible.</p>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-3 justify-center mt-6 pt-4 border-t border-[#E5E7EB]">
+        <button 
+          type="button"
+          (click)="closeDeleteModal()"
+          class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors"
+        >
+          Annuler
+        </button>
+        <button 
+          type="button"
+          (click)="confirmDelete()"
+          [disabled]="submitting()"
+          class="px-5 py-2.5 bg-[#BB0013] text-white text-sm font-medium rounded-xl hover:bg-[#93000D] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          @if (submitting()) {
+            <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            Suppression...
+          } @else {
+            <span class="material-symbols-outlined text-sm">delete</span>
+            Supprimer
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
 
   <!-- Modal -->
   @if (showModal()) {

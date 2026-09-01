@@ -19,6 +19,8 @@ export const routes: Routes = [
       },
         { path: 'campus', loadComponent: () => import('./features/campus/campus/campus').then(m => m.CampusManagement) },   
         { path: 'users', loadComponent: () => import('./features/users/users/users').then(m => m.Users) },   
+        { path: 'academic-years', loadComponent: () => import('./features/academic-years/academic-years/academic-years').then(m => m.AcademicYears) },
+        { path: 'formations', loadComponent: () => import('./features/formations/formations/formations').then(m => m.Formations) },
     ]
   }
 ];
