@@ -1,39 +1,36 @@
-import { Component, signal, OnInit, inject } from '@angular/core';
+import { Component, signal, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { CampusService, Campus as CampusType } from '../../../core/services/campus';
 
+type FormErrors = Partial<{ name: string; city: string; email: string; phone: string }>;
+
 @Component({
   imports: [CommonModule, RouterModule, FormsModule],
   selector: 'app-campus',
   styleUrl: './campus.css',
   templateUrl: './campus.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CampusManagement implements OnInit {
   private campusService = inject(CampusService);
   private toastr = inject(ToastrService);
 
   campuses = this.campusService.getCampuses();
-  loading = signal(true);
+  loading = signal(false);
   submitting = signal(false);
+  togglingId = signal<number | null>(null);
 
-  // Modal principal
   showModal = signal(false);
   isEditing = signal(false);
   selectedCampus = signal<CampusType | null>(null);
 
-  // Modal de confirmation
   showDeleteModal = signal(false);
   campusToDelete = signal<CampusType | null>(null);
 
-  errors = signal({
-    name: '',
-    city: '',
-    email: '',
-    phone: '',
-  });
+  errors = signal<FormErrors>({});
 
   formData = signal({
     name: '',
@@ -45,94 +42,47 @@ export class CampusManagement implements OnInit {
   });
 
   ngOnInit() {
-    this.loading.set(true);
-    this.campusService.loadCampuses();
-    this.loading.set(false);
+    this.loadCampuses();
   }
 
   loadCampuses() {
-    this.loading.set(true);
-    this.campusService.loadCampuses();
-    this.loading.set(false);
+  this.campusService.loadCampuses(); // ✅ Le service gère tout
+}
+
+  validate(): boolean {
+    const data = this.formData();
+    const e: FormErrors = {};
+
+    if (!data.name.trim()) e.name = 'Le nom est obligatoire';
+    else if (data.name.trim().length < 2) e.name = 'Minimum 2 caractères';
+
+    if (!data.city.trim()) e.city = 'La ville est obligatoire';
+    else if (data.city.trim().length < 2) e.city = 'Minimum 2 caractères';
+
+    if (data.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
+      e.email = 'Email invalide';
+    }
+
+    if (data.phone.trim() && !/^[0-9+\-\s]{8,20}$/.test(data.phone.trim())) {
+      e.phone = 'Numéro invalide (8-20 caractères)';
+    }
+
+    this.errors.set(e);
+    return Object.keys(e).length === 0;
   }
 
-  // === VALIDATIONS ===
-  validateName(): boolean {
-    const name = this.formData().name.trim();
-    if (!name) {
-      this.errors.update(e => ({ ...e, name: 'Le nom du campus est obligatoire' }));
-      return false;
-    }
-    if (name.length < 2) {
-      this.errors.update(e => ({ ...e, name: 'Le nom doit contenir au moins 2 caractères' }));
-      return false;
-    }
-    this.errors.update(e => ({ ...e, name: '' }));
-    return true;
-  }
-
-  validateCity(): boolean {
-    const city = this.formData().city.trim();
-    if (!city) {
-      this.errors.update(e => ({ ...e, city: 'La ville est obligatoire' }));
-      return false;
-    }
-    if (city.length < 2) {
-      this.errors.update(e => ({ ...e, city: 'La ville doit contenir au moins 2 caractères' }));
-      return false;
-    }
-    this.errors.update(e => ({ ...e, city: '' }));
-    return true;
-  }
-
-  validateEmail(): boolean {
-    const email = this.formData().email.trim();
-    if (email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
-      this.errors.update(e => ({ ...e, email: 'Veuillez saisir un email valide' }));
-      return false;
-    }
-    this.errors.update(e => ({ ...e, email: '' }));
-    return true;
-  }
-
-  validatePhone(): boolean {
-    const phone = this.formData().phone.trim();
-    if (phone && !/^[0-9+\-\s]{8,20}$/.test(phone)) {
-      this.errors.update(e => ({ ...e, phone: 'Veuillez saisir un numéro valide (8-20 caractères)' }));
-      return false;
-    }
-    this.errors.update(e => ({ ...e, phone: '' }));
-    return true;
-  }
-
-  validateForm(): boolean {
-    const isNameValid = this.validateName();
-    const isCityValid = this.validateCity();
-    const isEmailValid = this.validateEmail();
-    const isPhoneValid = this.validatePhone();
-    return isNameValid && isCityValid && isEmailValid && isPhoneValid;
-  }
-
-  // === MODAL PRINCIPAL ===
   openCreateModal() {
     this.isEditing.set(false);
     this.selectedCampus.set(null);
-    this.errors.set({ name: '', city: '', email: '', phone: '' });
-    this.formData.set({
-      name: '',
-      city: '',
-      address: '',
-      phone: '',
-      email: '',
-      is_active: true
-    });
+    this.errors.set({});
+    this.formData.set({ name: '', city: '', address: '', phone: '', email: '', is_active: true });
     this.showModal.set(true);
   }
 
   openEditModal(campus: CampusType) {
     this.isEditing.set(true);
     this.selectedCampus.set(campus);
-    this.errors.set({ name: '', city: '', email: '', phone: '' });
+    this.errors.set({});
     this.formData.set({
       name: campus.name,
       city: campus.city,
@@ -146,48 +96,41 @@ export class CampusManagement implements OnInit {
 
   closeModal() {
     this.showModal.set(false);
-    this.errors.set({ name: '', city: '', email: '', phone: '' });
+    this.errors.set({});
   }
 
   onSubmit() {
-    if (!this.validateForm()) {
-      this.toastr.warning('Veuillez corriger les erreurs du formulaire');
-      return;
-    }
+    if (!this.validate()) return;
 
-    const data = this.formData();
     this.submitting.set(true);
+    const obs = this.isEditing()
+      ? this.campusService.update(this.selectedCampus()!.id, this.formData())
+      : this.campusService.create(this.formData());
 
-    if (this.isEditing() && this.selectedCampus()) {
-      this.campusService.update(this.selectedCampus()!.id, data).subscribe({
-        next: () => {
-          this.toastr.success('Campus modifié avec succès');
-          this.closeModal();
-          this.loadCampuses();
-          this.submitting.set(false);
-        },
-        error: (err) => {
-          this.toastr.error(err.error?.message || 'Erreur lors de la modification');
-          this.submitting.set(false);
+    obs.subscribe({
+      next: () => {
+        this.toastr.success(this.isEditing() ? 'Campus modifié' : 'Campus créé');
+        this.closeModal();
+        this.loadCampuses();
+        this.submitting.set(false);
+      },
+      error: (err: any) => {
+        if (err.status === 422 && err.error?.errors) {
+          const e: FormErrors = {};
+          for (const [key, msg] of Object.entries(err.error.errors)) {
+            if (key in e || ['name', 'city', 'email', 'phone'].includes(key)) {
+              e[key as keyof FormErrors] = Array.isArray(msg) ? msg[0] : msg as string;
+            }
+          }
+          this.errors.set(e);
+        } else {
+          this.toastr.error(err.error?.message || 'Erreur');
         }
-      });
-    } else {
-      this.campusService.create(data).subscribe({
-        next: () => {
-          this.toastr.success('Campus créé avec succès');
-          this.closeModal();
-          this.loadCampuses();
-          this.submitting.set(false);
-        },
-        error: (err) => {
-          this.toastr.error(err.error?.message || 'Erreur lors de la création');
-          this.submitting.set(false);
-        }
-      });
-    }
+        this.submitting.set(false);
+      }
+    });
   }
 
-  // === MODAL DE CONFIRMATION SUPPRESSION ===
   openDeleteModal(campus: CampusType) {
     this.campusToDelete.set(campus);
     this.showDeleteModal.set(true);
@@ -205,28 +148,21 @@ export class CampusManagement implements OnInit {
     this.submitting.set(true);
     this.campusService.delete(campus.id).subscribe({
       next: () => {
-        this.toastr.success('Campus supprimé avec succès');
+        this.toastr.success('Campus supprimé');
         this.closeDeleteModal();
         this.loadCampuses();
         this.submitting.set(false);
       },
-      error: (err) => {
-        this.toastr.error(err.error?.message || 'Erreur lors de la suppression');
-        this.submitting.set(false);
-      }
+      error: () => this.submitting.set(false)
     });
   }
 
   toggleStatus(campus: CampusType) {
+    this.togglingId.set(campus.id);
     this.campusService.toggleStatus(campus.id).subscribe({
-      next: () => {
-        const status = !campus.is_active ? 'activé' : 'désactivé';
-        this.toastr.success(`Campus ${status} avec succès`);
-        this.loadCampuses();
-      },
-      error: (err) => {
-        this.toastr.error(err.error?.message || 'Erreur lors du changement de statut');
-      }
+      next: () => this.loadCampuses(),
+      error: () => this.togglingId.set(null),
+      complete: () => this.togglingId.set(null)
     });
   }
 }

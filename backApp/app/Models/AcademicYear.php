@@ -32,13 +32,13 @@ class AcademicYear extends Model
         return $this->hasMany(User::class);
     }
 
-    // public function students()
-    // {
-    //     return $this->hasMany(Student::class);
-    // }
+    public function students()
+    {
+        return $this->hasMany(Student::class);
+    }
 
-    // public function registrations()
-    // {
-    //     return $this->hasMany(Registration::class);
-    // }
+    public function registrations()
+    {
+        return $this->hasMany(Registration::class);
+    }
 }

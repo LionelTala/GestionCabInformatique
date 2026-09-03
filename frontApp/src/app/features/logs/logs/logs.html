@@ -1,0 +1,185 @@
+<div>
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 animate-fade-in-up" style="animation-delay: 0.1s;">
+    <div>
+      <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#15157D] text-3xl">history</span>
+        Journal d'activité
+      </h1>
+      <p class="text-[#6B7280] text-sm mt-1">Consultez toutes les actions effectuées dans le système</p>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4 mb-6">
+    <div class="flex flex-wrap items-end gap-4">
+      @if (canSeeCampus()) {
+        <div class="flex-1 min-w-[150px]">
+          <label class="block text-xs font-medium text-[#6B7280] mb-1">Campus</label>
+          <select 
+            [(ngModel)]="filters().campus_id"
+            (change)="applyFilters()"
+            class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none"
+          >
+            <option [value]="null">Tous les campus</option>
+            @for (campus of campuses(); track campus.id) {
+              <option [value]="campus.id">{{ campus.name }}</option>
+            }
+          </select>
+        </div>
+      }
+      <div class="flex-1 min-w-[150px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Action</label>
+        <select 
+          [(ngModel)]="filters().action"
+          (change)="applyFilters()"
+          class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none"
+        >
+          @for (option of actionOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="flex-1 min-w-[150px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Utilisateur</label>
+        <select 
+          [(ngModel)]="filters().user_id"
+          (change)="applyFilters()"
+          class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none"
+        >
+          <option [value]="null">Tous les utilisateurs</option>
+          @for (user of users(); track user.id) {
+            <option [value]="user.id">{{ user.first_name }} {{ user.last_name }}</option>
+          }
+        </select>
+      </div>
+      <button 
+        (click)="resetFilters()"
+        class="px-4 py-2 text-sm text-[#6B7280] hover:text-[#15157D] hover:bg-[#E8F0FE] rounded-lg transition-colors"
+      >
+        <span class="material-symbols-outlined text-sm align-middle">refresh</span> Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <!-- Liste des logs -->
+  @if (loading()) {
+    <div class="flex flex-col items-center justify-center py-20">
+      <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+      <p class="text-[#6B7280] mt-4 text-sm">Chargement des logs...</p>
+    </div>
+  } @else {
+    <div class="space-y-3">
+      <!-- Correction ici : utilisation de logs()?.data si vos logs sont paginés, ou logs() si c'est directement un tableau -->
+<!-- Nouvelle ligne correcte -->
+@for (log of logs(); track log.id; let i = $index) {        <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4 hover:shadow-md transition-shadow animate-fade-in-up" [style.animation-delay]="(0.1 + (i * 0.03)) + 's'">
+          <div class="flex items-start gap-4">
+            <!-- Icône -->
+            <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 {{ getActionColor(log.action) }}">
+              <span class="material-symbols-outlined">{{ getActionIcon(log.action) }}</span>
+            </div>
+
+            <!-- Contenu -->
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p class="text-sm text-[#0B1C30] font-medium">
+                    {{ log.changes || log.action }}
+                  </p>
+                  <div class="flex flex-wrap items-center gap-3 mt-1 text-xs text-[#6B7280]">
+                    <span class="flex items-center gap-1">
+                      <span class="material-symbols-outlined text-sm">person</span>
+                      {{ getUserName(log) }}
+                      <span class="px-1.5 py-0.5 bg-[#F5F7FA] rounded text-[10px] text-[#6B7280]">
+                        {{ getUserRole(log) }}
+                      </span>
+                    </span>
+                    @if (getCampusName(log) !== '-') {
+                      <span class="flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">location_on</span>
+                        {{ getCampusName(log) }}
+                      </span>
+                    }
+                    <span class="flex items-center gap-1">
+                      <span class="material-symbols-outlined text-sm">schedule</span>
+                      {{ formatDate(log.created_at) }}
+                    </span>
+                  </div>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ getActionColor(log.action) }}">
+                  {{ getActionLabel(log.action) }}
+                </span>
+              </div>
+
+              <!-- Détails de la modification -->
+              @if (log.action === 'updated' && log.old_data && log.new_data) {
+                <div class="mt-2 p-2 bg-[#F5F7FA] rounded-lg text-xs">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <span class="text-[#6B7280]">Ancienne valeur:</span>
+                      <pre class="mt-1 text-[#6B7280]">{{ log.old_data | json }}</pre>
+                    </div>
+                    <div>
+                      <span class="text-[#15157D]">Nouvelle valeur:</span>
+                      <pre class="mt-1 text-[#15157D]">{{ log.new_data | json }}</pre>
+                    </div>
+                  </div>
+                </div>
+              }
+ 
+            </div>
+          </div>
+        </div>
+      } @empty {
+        <div class="text-center py-20 text-[#6B7280]">
+          <span class="material-symbols-outlined text-5xl text-[#E5E7EB] block mb-3">history</span>
+          <p>Aucun log trouvé</p>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Pagination -->
+  @if (meta()?.total && meta()!.total > 0) {
+    <div class="flex items-center justify-between px-6 py-4 mt-4 border-t border-[#E5E7EB]">
+      <div class="text-sm text-[#6B7280]">
+        Affichage de <span class="font-medium">{{ meta()?.from }}</span> à <span class="font-medium">{{ meta()?.to }}</span> sur <span class="font-medium">{{ meta()?.total }}</span> logs
+      </div>
+      <div class="flex items-center gap-1">
+        <button 
+          (click)="goToPage(meta()!.current_page - 1)"
+          [disabled]="meta()?.current_page === 1"
+          class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span class="material-symbols-outlined text-sm">chevron_left</span>
+        </button>
+
+        @for (page of getPages(); track $index) {
+          @if (page === -1) {
+            <span class="px-2 text-[#6B7280]">…</span>
+          } @else {
+            <button 
+              (click)="goToPage(page)"
+              [class.bg-[#15157D]]="page === meta()?.current_page"
+              [class.text-white]="page === meta()?.current_page"
+              [class.text-[#6B7280]]="page !== meta()?.current_page"
+              [class.font-medium]="page === meta()?.current_page"
+              class="w-8 h-8 rounded-lg hover:bg-[#F5F7FA] transition-colors text-sm"
+            >
+              {{ page }}
+            </button>
+          }
+        }
+
+        <button 
+          (click)="goToPage(meta()!.current_page + 1)"
+          [disabled]="meta()?.current_page === meta()?.last_page"
+          class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span class="material-symbols-outlined text-sm">chevron_right</span>
+        </button>
+      </div>
+    </div>
+  }
+</div>

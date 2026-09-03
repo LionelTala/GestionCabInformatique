@@ -1,7 +1,7 @@
 <div>
 
   <!-- Header -->
-  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 animate-fade-in-up" style="animation-delay: 0.1s;">
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
     <div>
       <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
         <span class="material-symbols-outlined text-[#15157D] text-3xl">event_note</span>
@@ -10,24 +10,19 @@
       <p class="text-[#6B7280] text-sm mt-1">Gérez les années scolaires du centre</p>
     </div>
     @if (canManage()) {
-      <button 
-        (click)="openCreateModal()"
-        class="bg-[#15157D] text-white px-5 py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm whitespace-nowrap"
-      >
+      <button (click)="openCreateModal()" class="bg-[#15157D] text-white px-5 py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm">
         <span class="material-symbols-outlined text-lg">add</span>
         Nouvelle année
       </button>
     }
   </div>
 
-  <!-- Loader -->
   @if (loading()) {
     <div class="flex flex-col items-center justify-center py-20">
       <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
-      <p class="text-[#6B7280] mt-4 text-sm">Chargement des années...</p>
+      <p class="text-[#6B7280] mt-4 text-sm">Chargement...</p>
     </div>
   } @else {
-    <!-- Tableau -->
     <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full">
@@ -43,8 +38,8 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-[#E5E7EB]">
-            @for (year of years(); track year.id; let i = $index) {
-              <tr class="hover:bg-[#F5F7FA] transition-colors animate-fade-in-up" [style.animation-delay]="(0.1 + (i * 0.03)) + 's'">
+            @for (year of years(); track year.id) {
+              <tr class="hover:bg-[#F5F7FA] transition-colors">
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-3">
                     <span class="font-medium text-[#0B1C30]">{{ year.label }}</span>
@@ -56,13 +51,7 @@
                 <td class="px-6 py-4 text-sm text-[#6B7280]">{{ formatDate(year.start_date) }}</td>
                 <td class="px-6 py-4 text-sm text-[#6B7280]">{{ formatDate(year.end_date) }}</td>
                 <td class="px-6 py-4">
-                  <span 
-                    [class.bg-green-100]="year.is_active"
-                    [class.text-green-700]="year.is_active"
-                    [class.bg-red-100]="!year.is_active"
-                    [class.text-red-700]="!year.is_active"
-                    class="px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1 w-fit"
-                  >
+                  <span [class.bg-green-100]="year.is_active" [class.text-green-700]="year.is_active" [class.bg-red-100]="!year.is_active" [class.text-red-700]="!year.is_active" class="px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1 w-fit">
                     <span class="w-1.5 h-1.5 rounded-full" [class.bg-green-500]="year.is_active" [class.bg-red-500]="!year.is_active"></span>
                     {{ year.is_active ? 'Actif' : 'Inactif' }}
                   </span>
@@ -70,25 +59,17 @@
                 @if (canManage()) {
                   <td class="px-6 py-4 text-right">
                     <div class="flex items-center justify-end gap-0.5">
-                      <button 
-                        (click)="toggleStatus(year)"
-                        class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#15157D] hover:text-[#2E3192] transition-colors"
-                        title="{{ year.is_active ? 'Désactiver' : 'Activer' }}"
-                      >
-                        <span class="material-symbols-outlined text-xl">{{ year.is_active ? 'pause_circle' : 'play_circle' }}</span>
+                      <button (click)="toggleStatus(year)" [disabled]="togglingId() === year.id" class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#15157D] transition-colors disabled:opacity-50" title="{{ year.is_active ? 'Désactiver' : 'Activer' }}">
+                        @if (togglingId() === year.id) {
+                          <span class="w-5 h-5 border-2 border-[#15157D] border-t-transparent rounded-full animate-spin inline-block"></span>
+                        } @else {
+                          <span class="material-symbols-outlined text-xl">{{ year.is_active ? 'pause_circle' : 'play_circle' }}</span>
+                        }
                       </button>
-                      <button 
-                        (click)="openEditModal(year)"
-                        class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6C3CE1] hover:text-[#5A2CB8] transition-colors"
-                        title="Modifier"
-                      >
+                      <button (click)="openEditModal(year)" class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6C3CE1] transition-colors" title="Modifier">
                         <span class="material-symbols-outlined text-xl">edit</span>
                       </button>
-                      <button 
-                        (click)="openDeleteModal(year)"
-                        class="p-2 rounded-lg hover:bg-red-50 text-[#BB0013] hover:text-[#93000D] transition-colors"
-                        title="Supprimer"
-                      >
+                      <button (click)="openDeleteModal(year)" class="p-2 rounded-lg hover:bg-red-50 text-[#BB0013] transition-colors" title="Supprimer">
                         <span class="material-symbols-outlined text-xl">delete</span>
                       </button>
                     </div>
@@ -97,7 +78,7 @@
               </tr>
             } @empty {
               <tr>
-                <td colspan="5" class="text-center py-12 text-[#6B7280]">
+                <td [attr.colspan]="canManage() ? 5 : 4" class="text-center py-12 text-[#6B7280]">
                   <span class="material-symbols-outlined text-5xl text-[#E5E7EB] block mb-3">event_note</span>
                   <p>Aucune année scolaire enregistrée</p>
                 </td>
@@ -109,169 +90,65 @@
     </div>
   }
 
-  <!-- Modal principal -->
+  <!-- Modal formulaire -->
   @if (showModal()) {
-    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeModal()">
-      <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up" (click)="$event.stopPropagation()">
-        
-        <!-- Header -->
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" (click)="closeModal()">
+      <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
-              <span class="material-symbols-outlined text-2xl">
-                {{ isEditing() ? 'edit' : 'add' }}
-              </span>
+              <span class="material-symbols-outlined text-2xl">{{ isEditing() ? 'edit' : 'add' }}</span>
             </div>
             <div>
-              <h2 class="text-xl font-bold text-[#0B1C30]">
-                {{ isEditing() ? 'Modifier l\'année' : 'Nouvelle année' }}
-              </h2>
-              <p class="text-sm text-[#6B7280]">
-                {{ isEditing() ? 'Modifiez les informations de l\'année' : 'Remplissez les informations de la nouvelle année' }}
-              </p>
+              <h2 class="text-xl font-bold text-[#0B1C30]">{{ isEditing() ? "Modifier l'année" : 'Nouvelle année' }}</h2>
+              <p class="text-sm text-[#6B7280]">{{ isEditing() ? 'Modifiez les informations' : 'Remplissez les informations' }}</p>
             </div>
           </div>
-          <button 
-            type="button"
-            (click)="closeModal()" 
-            class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors"
-          >
-            <span class="material-symbols-outlined">close</span>
-          </button>
+          <button (click)="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280]"><span class="material-symbols-outlined">close</span></button>
         </div>
 
-        <!-- Formulaire -->
         <form (ngSubmit)="onSubmit()">
           <div class="space-y-4">
-            
-            <!-- Libellé -->
             <div>
-              <label class="block text-sm font-medium text-[#0B1C30] mb-1">
-                Libellé <span class="text-[#BB0013]">*</span>
-              </label>
-              <input 
-                type="text"
-                [(ngModel)]="formData().label"
-                name="label"
-                (blur)="validateLabel()"
-                (input)="validateLabel()"
-                class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
-                [class.border-[#BB0013]]="errors().label"
-                [class.border-[#E5E7EB]]="!errors().label"
-                placeholder="Ex: 2024-2025"
-              />
-              @if (errors().label) {
-                <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1">
-                  <span class="material-symbols-outlined text-sm">error</span>
-                  {{ errors().label }}
-                </p>
-              }
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Libellé <span class="text-[#BB0013]">*</span></label>
+              <input type="text" [(ngModel)]="formData().label" name="label" (blur)="validate()" (input)="validate()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-red-500]="errors().label" [class.border-[#E5E7EB]]="!errors().label" placeholder="Ex: 2024-2025" />
+              @if (errors().label) { <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ errors().label }}</p> }
             </div>
 
-            <!-- Dates -->
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-sm font-medium text-[#0B1C30] mb-1">
-                  Date début <span class="text-[#BB0013]">*</span>
-                </label>
-                <input 
-                  type="date"
-                  [(ngModel)]="formData().start_date"
-                  name="start_date"
-                  (blur)="validateStartDate()"
-                  (change)="validateStartDate()"
-                  class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
-                  [class.border-[#BB0013]]="errors().start_date"
-                  [class.border-[#E5E7EB]]="!errors().start_date"
-                />
-                @if (errors().start_date) {
-                  <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1">
-                    <span class="material-symbols-outlined text-sm">error</span>
-                    {{ errors().start_date }}
-                  </p>
-                }
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Date début <span class="text-[#BB0013]">*</span></label>
+                <input type="date" [(ngModel)]="formData().start_date" name="start_date" (blur)="validate()" (change)="validate()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-red-500]="errors().start_date" [class.border-[#E5E7EB]]="!errors().start_date" />
+                @if (errors().start_date) { <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ errors().start_date }}</p> }
               </div>
               <div>
-                <label class="block text-sm font-medium text-[#0B1C30] mb-1">
-                  Date fin <span class="text-[#BB0013]">*</span>
-                </label>
-                <input 
-                  type="date"
-                  [(ngModel)]="formData().end_date"
-                  name="end_date"
-                  (blur)="validateEndDate()"
-                  (change)="validateEndDate()"
-                  class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
-                  [class.border-[#BB0013]]="errors().end_date"
-                  [class.border-[#E5E7EB]]="!errors().end_date"
-                />
-                @if (errors().end_date) {
-                  <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1">
-                    <span class="material-symbols-outlined text-sm">error</span>
-                    {{ errors().end_date }}
-                  </p>
-                }
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Date fin <span class="text-[#BB0013]">*</span></label>
+                <input type="date" [(ngModel)]="formData().end_date" name="end_date" (blur)="validate()" (change)="validate()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-red-500]="errors().end_date" [class.border-[#E5E7EB]]="!errors().end_date" />
+                @if (errors().end_date) { <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ errors().end_date }}</p> }
               </div>
             </div>
 
-            <!-- Année en cours -->
             <div>
               <label class="flex items-center gap-3 cursor-pointer group">
-                <input 
-                  type="checkbox"
-                  [(ngModel)]="formData().is_current"
-                  name="is_current"
-                  class="w-4 h-4 text-[#15157D] border-[#E5E7EB] rounded focus:ring-[#15157D] focus:ring-2"
-                />
-                <span class="text-sm font-medium text-[#0B1C30] group-hover:text-[#15157D] transition-colors">
-                  Définir comme année en cours
-                </span>
+                <input type="checkbox" [(ngModel)]="formData().is_current" name="is_current" class="w-4 h-4 text-[#15157D] border-[#E5E7EB] rounded focus:ring-[#15157D] focus:ring-2" />
+                <span class="text-sm font-medium text-[#0B1C30] group-hover:text-[#15157D] transition-colors">Définir comme année en cours</span>
               </label>
-              <p class="text-xs text-[#6B7280] mt-1 ml-7">
-                Si cochée, cette année sera sélectionnée par défaut pour tous les nouveaux utilisateurs.
-              </p>
+              <p class="text-xs text-[#6B7280] mt-1 ml-7">Si cochée, sélectionnée par défaut pour les nouveaux utilisateurs.</p>
             </div>
 
-            <!-- Statut -->
             <div>
               <label class="flex items-center gap-3 cursor-pointer group">
-                <input 
-                  type="checkbox"
-                  [(ngModel)]="formData().is_active"
-                  name="is_active"
-                  class="w-4 h-4 text-[#15157D] border-[#E5E7EB] rounded focus:ring-[#15157D] focus:ring-2"
-                />
-                <span class="text-sm font-medium text-[#0B1C30] group-hover:text-[#15157D] transition-colors">
-                  Année active
-                </span>
+                <input type="checkbox" [(ngModel)]="formData().is_active" name="is_active" class="w-4 h-4 text-[#15157D] border-[#E5E7EB] rounded focus:ring-[#15157D] focus:ring-2" />
+                <span class="text-sm font-medium text-[#0B1C30] group-hover:text-[#15157D] transition-colors">Année active</span>
               </label>
-              <p class="text-xs text-[#6B7280] mt-1 ml-7">
-                Si désactivée, l'année ne sera plus visible dans le dropdown.
-              </p>
             </div>
           </div>
 
-          <!-- Actions -->
           <div class="flex gap-3 justify-end mt-6 pt-4 border-t border-[#E5E7EB]">
-            <button 
-              type="button"
-              (click)="closeModal()"
-              class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors"
-            >
-              Annuler
-            </button>
-            <button 
-              type="submit"
-              [disabled]="submitting()"
-              class="px-5 py-2.5 bg-[#15157D] text-white text-sm font-medium rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              @if (submitting()) {
-                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                {{ isEditing() ? 'Modification...' : 'Création...' }}
-              } @else {
-                <span class="material-symbols-outlined text-sm">{{ isEditing() ? 'save' : 'add' }}</span>
-                {{ isEditing() ? 'Modifier' : 'Créer' }}
-              }
+            <button type="button" (click)="closeModal()" class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">Annuler</button>
+            <button type="submit" [disabled]="submitting()" class="px-5 py-2.5 bg-[#15157D] text-white text-sm font-medium rounded-xl hover:bg-[#2E3192] transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              @if (submitting()) { <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> {{ isEditing() ? 'Modification...' : 'Création...' }} }
+              @else { <span class="material-symbols-outlined text-sm">{{ isEditing() ? 'save' : 'add' }}</span> {{ isEditing() ? 'Modifier' : 'Créer' }} }
             </button>
           </div>
         </form>
@@ -279,45 +156,22 @@
     </div>
   }
 
-  <!-- Modal de confirmation de suppression -->
+  <!-- Modal suppression -->
   @if (showDeleteModal()) {
-    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeDeleteModal()">
-      <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-slide-up" (click)="$event.stopPropagation()">
-        
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" (click)="closeDeleteModal()">
+      <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl" (click)="$event.stopPropagation()">
         <div class="flex flex-col items-center text-center">
           <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-[#BB0013] mb-4">
             <span class="material-symbols-outlined text-4xl">delete_forever</span>
           </div>
-          
           <h2 class="text-xl font-bold text-[#0B1C30]">Confirmer la suppression</h2>
-          <p class="text-[#6B7280] text-sm mt-2">
-            Êtes-vous sûr de vouloir supprimer l'année 
-            <span class="font-semibold text-[#0B1C30]">"{{ yearToDelete()?.label }}"</span> ?
-          </p>
-          <p class="text-xs text-[#6B7280] mt-1">Cette action est irréversible.</p>
+          <p class="text-[#6B7280] text-sm mt-2">Supprimer <span class="font-semibold text-[#0B1C30]">"{{ yearToDelete()?.label }}"</span> ?</p>
         </div>
-
         <div class="flex gap-3 justify-center mt-6 pt-4 border-t border-[#E5E7EB]">
-          <button 
-            type="button"
-            (click)="closeDeleteModal()"
-            class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors"
-          >
-            Annuler
-          </button>
-          <button 
-            type="button"
-            (click)="confirmDelete()"
-            [disabled]="submitting()"
-            class="px-5 py-2.5 bg-[#BB0013] text-white text-sm font-medium rounded-xl hover:bg-[#93000D] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            @if (submitting()) {
-              <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              Suppression...
-            } @else {
-              <span class="material-symbols-outlined text-sm">delete</span>
-              Supprimer
-            }
+          <button (click)="closeDeleteModal()" class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">Annuler</button>
+          <button (click)="confirmDelete()" [disabled]="submitting()" class="px-5 py-2.5 bg-[#BB0013] text-white text-sm font-medium rounded-xl hover:bg-[#93000D] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            @if (submitting()) { <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Suppression... }
+            @else { <span class="material-symbols-outlined text-sm">delete</span> Supprimer }
           </button>
         </div>
       </div>

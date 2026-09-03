@@ -5,315 +5,203 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
-use Exception;
 
 class UserController extends Controller
 {
-    // Liste des utilisateurs
     public function index(Request $request)
     {
-        try {
-            $user = $request->user();
+        $user = $request->user();
+        $query = User::select('id', 'first_name', 'last_name', 'email', 'phone', 'role', 'campus_id', 'is_active', 'created_at')
+            ->with('campus:id,name,city');
 
-            if (!in_array($user->role, ['super_admin', 'admin_global', 'admin_campus'])) {
-                return response()->json([
-                    'message' => 'Accès non autorisé'
-                ], 403);
-            }
+        match ($user->role) {
+            'admin_global' => $query->where('role', '!=', 'super_admin'),
+            'admin_campus' => $query->where('campus_id', $user->campus_id)
+                ->whereIn('role', ['admin_campus', 'secretary']),
+            default => null,
+        };
 
-            $query = User::with('campus');
-
-            if ($user->role === 'super_admin') {
-                // Tout voir
-            } elseif ($user->role === 'admin_global') {
-                $query->where('role', '!=', 'super_admin');
-            } elseif ($user->role === 'admin_campus') {
-                $query->where('campus_id', $user->campus_id)
-                      ->whereIn('role', ['admin_campus', 'secretary']);
-            }
-
-            $users = $query->orderBy('created_at', 'desc')->get();
-
-            return response()->json([
-                'message' => 'Liste des utilisateurs récupérée avec succès',
-                'data' => $users
-            ]);
-
-        } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Erreur lors de la récupération des utilisateurs',
-                'error' => $e->getMessage()
-            ], 500);
+        // Recherche
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
         }
+
+        // Filtre rôle
+        if ($role = $request->query('role')) {
+            $query->where('role', $role);
+        }
+
+        // Filtre campus
+        if ($campusId = $request->query('campus_id')) {
+            $query->where('campus_id', $campusId);
+        }
+
+        // Filtre statut
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        return response()->json([
+            'data' => $query->orderBy('created_at', 'desc')->paginate($request->integer('per_page', 15))
+        ]);
     }
 
-    // Créer un utilisateur
     public function store(Request $request)
     {
-        try {
-            $user = $request->user();
+        $user = $request->user();
 
-            if (!in_array($user->role, ['super_admin', 'admin_global', 'admin_campus'])) {
-                return response()->json([
-                    'message' => 'Accès non autorisé'
-                ], 403);
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'email' => 'required|email|max:255|unique:users,email',
+            'password' => 'required|string|min:6',
+            'phone' => 'nullable|string|max:20',
+            'role' => 'required|in:admin_global,admin_campus,secretary',
+            'campus_id' => 'nullable|exists:campuses,id',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        // Restrictions par rôle
+        if ($user->role === 'admin_campus') {
+            if ($validated['role'] !== 'secretary') {
+                return response()->json(['message' => 'Un admin campus ne peut créer que des secrétaires'], 403);
             }
-
-            $validated = $request->validate([
-                'first_name' => 'required|string|max:100',
-                'last_name' => 'required|string|max:100',
-                'email' => 'required|email|max:255|unique:users,email',
-                'password' => 'required|string|min:6',
-                'phone' => 'nullable|string|max:20',
-                'role' => 'required|in:admin_global,admin_campus,secretary',
-                'campus_id' => 'nullable|exists:campuses,id',
-                'is_active' => 'nullable|boolean',
-            ], [
-                'first_name.required' => 'Le prénom est obligatoire',
-                'last_name.required' => 'Le nom est obligatoire',
-                'email.required' => 'L\'email est obligatoire',
-                'email.email' => 'Veuillez saisir un email valide',
-                'email.unique' => 'Cet email est déjà utilisé',
-                'password.required' => 'Le mot de passe est obligatoire',
-                'password.min' => 'Le mot de passe doit contenir au moins 6 caractères',
-                'role.required' => 'Le rôle est obligatoire',
-                'role.in' => 'Rôle invalide',
-                'campus_id.exists' => 'Campus invalide',
-            ]);
-
-            // Admin Campus ne peut créer que des secrétaires
-            if ($user->role === 'admin_campus') {
-                if ($validated['role'] !== 'secretary') {
-                    return response()->json([
-                        'message' => 'Un admin campus ne peut créer que des secrétaires'
-                    ], 403);
-                }
-                $validated['campus_id'] = $user->campus_id;
-            }
-
-            // Admin Global ne peut pas créer de Super Admin
-            if ($user->role === 'admin_global' && $validated['role'] === 'super_admin') {
-                return response()->json([
-                    'message' => 'Vous ne pouvez pas créer un super admin'
-                ], 403);
-            }
-
-            // Campus obligatoire pour admin_campus et secretary
-            if (in_array($validated['role'], ['admin_campus', 'secretary']) && !$validated['campus_id']) {
-                return response()->json([
-                    'message' => 'Le campus est obligatoire pour ce rôle'
-                ], 422);
-            }
-
-            $validated['password'] = Hash::make($validated['password']);
-            $validated['is_active'] = $validated['is_active'] ?? true;
-
-            $newUser = User::create($validated);
-
-            return response()->json([
-                'message' => 'Utilisateur créé avec succès',
-                'data' => $newUser->load('campus')
-            ], 201);
-
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Erreur de validation',
-                'errors' => $e->errors()
-            ], 422);
-
-        } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Erreur lors de la création de l\'utilisateur',
-                'error' => $e->getMessage()
-            ], 500);
+            $validated['campus_id'] = $user->campus_id;
         }
+
+        if ($user->role === 'admin_global' && $validated['role'] === 'super_admin') {
+            return response()->json(['message' => 'Impossible de créer un super admin'], 403);
+        }
+
+        if (in_array($validated['role'], ['admin_campus', 'secretary']) && empty($validated['campus_id'])) {
+            return response()->json(['message' => 'Le campus est obligatoire pour ce rôle'], 422);
+        }
+
+        $validated['password'] = bcrypt($validated['password']);
+        $validated['is_active'] = $validated['is_active'] ?? true;
+
+        $newUser = User::create($validated);
+
+        Log::info('Utilisateur créé', [
+            'id' => $newUser->id,
+            'email' => $newUser->email,
+            'role' => $newUser->role,
+            'by' => $user->id,
+        ]);
+
+        return response()->json([
+            'message' => 'Utilisateur créé avec succès',
+            'data' => $newUser->load('campus:id,name,city')
+        ], 201);
     }
 
-    // Modifier un utilisateur
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
-        try {
-            $user = $request->user();
-            $targetUser = User::findOrFail($id);
+        $user = $request->user();
+        $target = User::select('id', 'first_name', 'last_name', 'email', 'phone', 'role', 'campus_id', 'is_active')
+            ->findOrFail($id);
 
-            if (!in_array($user->role, ['super_admin', 'admin_global', 'admin_campus'])) {
-                return response()->json([
-                    'message' => 'Accès non autorisé'
-                ], 403);
-            }
+        $this->checkEditAccess($user, $target);
 
-            // Admin Campus
-            if ($user->role === 'admin_campus') {
-                if ($targetUser->campus_id !== $user->campus_id) {
-                    return response()->json([
-                        'message' => 'Vous ne pouvez modifier que les utilisateurs de votre campus'
-                    ], 403);
-                }
-                if ($targetUser->role !== 'secretary') {
-                    return response()->json([
-                        'message' => 'Un admin campus ne peut modifier que des secrétaires'
-                    ], 403);
-                }
-            }
+        $validated = $request->validate([
+            'first_name' => 'sometimes|required|string|max:100',
+            'last_name' => 'sometimes|required|string|max:100',
+            'email' => 'sometimes|required|email|max:255|unique:users,email,' . $id,
+            'phone' => 'nullable|string|max:20',
+            'role' => 'sometimes|in:admin_global,admin_campus,secretary',
+            'campus_id' => 'nullable|exists:campuses,id',
+            'is_active' => 'nullable|boolean',
+            'password' => 'nullable|string|min:6',
+        ]);
 
-            // Admin Global
-            if ($user->role === 'admin_global' && $targetUser->role === 'super_admin') {
-                return response()->json([
-                    'message' => 'Vous ne pouvez pas modifier un super admin'
-                ], 403);
-            }
-
-            $validated = $request->validate([
-                'first_name' => 'sometimes|required|string|max:100',
-                'last_name' => 'sometimes|required|string|max:100',
-                'email' => 'sometimes|required|email|max:255|unique:users,email,' . $id,
-                'phone' => 'nullable|string|max:20',
-                'role' => 'sometimes|required|in:admin_global,admin_campus,secretary',
-                'campus_id' => 'nullable|exists:campuses,id',
-                'is_active' => 'nullable|boolean',
-            ], [
-                'first_name.required' => 'Le prénom est obligatoire',
-                'last_name.required' => 'Le nom est obligatoire',
-                'email.required' => 'L\'email est obligatoire',
-                'email.email' => 'Veuillez saisir un email valide',
-                'email.unique' => 'Cet email est déjà utilisé',
-                'role.in' => 'Rôle invalide',
-                'campus_id.exists' => 'Campus invalide',
-            ]);
-
-            // Admin Campus ne peut pas changer le rôle
-            if ($user->role === 'admin_campus') {
-                unset($validated['role']);
-                unset($validated['campus_id']);
-            }
-
-            $targetUser->update($validated);
-
-            return response()->json([
-                'message' => 'Utilisateur modifié avec succès',
-                'data' => $targetUser->load('campus')
-            ]);
-
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Erreur de validation',
-                'errors' => $e->errors()
-            ], 422);
-
-        } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Erreur lors de la modification de l\'utilisateur',
-                'error' => $e->getMessage()
-            ], 500);
+        if ($user->role === 'admin_campus') {
+            unset($validated['role'], $validated['campus_id']);
         }
+
+        if (isset($validated['password'])) {
+            $validated['password'] = bcrypt($validated['password']);
+        } else {
+            unset($validated['password']);
+        }
+
+        $target->update($validated);
+
+        Log::info('Utilisateur modifié', [
+            'id' => $target->id,
+            'by' => $user->id,
+            'changes' => array_keys($validated),
+        ]);
+
+        return response()->json([
+            'message' => 'Utilisateur modifié avec succès',
+            'data' => $target->load('campus:id,name,city')
+        ]);
     }
 
-    // Supprimer un utilisateur
-    public function destroy(Request $request, $id)
+    public function destroy(Request $request, int $id)
     {
-        try {
-            $user = $request->user();
-            $targetUser = User::findOrFail($id);
+        $user = $request->user();
+        $target = User::findOrFail($id);
 
-            if (!in_array($user->role, ['super_admin', 'admin_global', 'admin_campus'])) {
-                return response()->json([
-                    'message' => 'Accès non autorisé'
-                ], 403);
-            }
+        $this->checkEditAccess($user, $target);
 
-            // Admin Campus
-            if ($user->role === 'admin_campus') {
-                if ($targetUser->campus_id !== $user->campus_id) {
-                    return response()->json([
-                        'message' => 'Vous ne pouvez supprimer que les utilisateurs de votre campus'
-                    ], 403);
-                }
-                if ($targetUser->role !== 'secretary') {
-                    return response()->json([
-                        'message' => 'Un admin campus ne peut supprimer que des secrétaires'
-                    ], 403);
-                }
-            }
-
-            // Admin Global
-            if ($user->role === 'admin_global' && $targetUser->role === 'super_admin') {
-                return response()->json([
-                    'message' => 'Vous ne pouvez pas supprimer un super admin'
-                ], 403);
-            }
-
-            // Ne pas se supprimer soi-même
-            if ($user->id === $targetUser->id) {
-                return response()->json([
-                    'message' => 'Vous ne pouvez pas vous supprimer vous-même'
-                ], 403);
-            }
-
-            $targetUser->delete();
-
-            return response()->json([
-                'message' => 'Utilisateur supprimé avec succès'
-            ]);
-
-        } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Erreur lors de la suppression de l\'utilisateur',
-                'error' => $e->getMessage()
-            ], 500);
+        if ($user->id === $target->id) {
+            return response()->json(['message' => 'Vous ne pouvez pas vous supprimer'], 403);
         }
+
+        $target->delete();
+
+        Log::info('Utilisateur supprimé', [
+            'id' => $target->id,
+            'email' => $target->email,
+            'by' => $user->id,
+        ]);
+
+        return response()->json(['message' => 'Utilisateur supprimé avec succès']);
     }
 
-    // Activer/Désactiver un utilisateur
-    public function toggleStatus(Request $request, $id)
+    public function toggleStatus(Request $request, int $id)
     {
-        try {
-            $user = $request->user();
-            $targetUser = User::findOrFail($id);
+        $user = $request->user();
+        $target = User::select('id', 'is_active', 'role', 'campus_id')->findOrFail($id);
 
-            if (!in_array($user->role, ['super_admin', 'admin_global', 'admin_campus'])) {
-                return response()->json([
-                    'message' => 'Accès non autorisé'
-                ], 403);
+        $this->checkEditAccess($user, $target);
+
+        $target->update(['is_active' => !$target->is_active]);
+
+        Log::info('Utilisateur ' . ($target->is_active ? 'activé' : 'désactivé'), [
+            'id' => $target->id,
+            'by' => $user->id,
+        ]);
+
+        return response()->json([
+            'message' => "Utilisateur " . ($target->is_active ? 'activé' : 'désactivé'),
+            'data' => $target
+        ]);
+    }
+
+    // === PRIVE ===
+
+    private function checkEditAccess(User $user, User $target): void
+    {
+        if ($user->role === 'admin_global' && $target->role === 'super_admin') {
+            abort(403, 'Impossible de modifier un super admin');
+        }
+
+        if ($user->role === 'admin_campus') {
+            if ($target->campus_id !== $user->campus_id) {
+                abort(403, 'Pas accès à ce campus');
             }
-
-            // Admin Campus
-            if ($user->role === 'admin_campus') {
-                if ($targetUser->campus_id !== $user->campus_id) {
-                    return response()->json([
-                        'message' => 'Vous ne pouvez modifier que les utilisateurs de votre campus'
-                    ], 403);
-                }
-                if ($targetUser->role !== 'secretary') {
-                    return response()->json([
-                        'message' => 'Un admin campus ne peut modifier que des secrétaires'
-                    ], 403);
-                }
+            if (!in_array($target->role, ['admin_campus', 'secretary'])) {
+                abort(403, 'Pas accès à ce rôle');
             }
-
-            // Admin Global
-            if ($user->role === 'admin_global' && $targetUser->role === 'super_admin') {
-                return response()->json([
-                    'message' => 'Vous ne pouvez pas modifier un super admin'
-                ], 403);
-            }
-
-            $targetUser->is_active = !$targetUser->is_active;
-            $targetUser->save();
-
-            $status = $targetUser->is_active ? 'activé' : 'désactivé';
-
-            return response()->json([
-                'message' => "Utilisateur {$status} avec succès",
-                'data' => $targetUser
-            ]);
-
-        } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Erreur lors du changement de statut',
-                'error' => $e->getMessage()
-            ], 500);
         }
     }
 }

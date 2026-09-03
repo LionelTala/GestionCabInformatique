@@ -1,0 +1,141 @@
+<div class="p-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#15157D] text-3xl">account_balance</span>
+        Mouvements Financiers
+      </h1>
+      <p class="text-[#6B7280] text-sm mt-1">Bilan comptable complet</p>
+    </div>
+    <button 
+      (click)="generateReport()"
+      class="bg-[#15157D] text-white px-5 py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm"
+    >
+      <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
+      Générer le rapport PDF
+    </button>
+  </div>
+
+  <!-- Résumé financier -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-5">
+      <p class="text-xs text-[#6B7280] mb-2">Total Entrées</p>
+      <p class="text-2xl font-bold text-green-600">{{ formatPrice(summary().total_income) }}</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-5">
+      <p class="text-xs text-[#6B7280] mb-2">Total Sorties</p>
+      <p class="text-2xl font-bold text-red-600">{{ formatPrice(summary().total_expense) }}</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-5">
+      <p class="text-xs text-[#6B7280] mb-2">Solde Net</p>
+      <p class="text-2xl font-bold" [class.text-green-600]="summary().balance >= 0" [class.text-red-600]="summary().balance < 0">
+        {{ formatPrice(summary().balance) }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4 mb-6">
+    <div class="flex flex-wrap items-end gap-4">
+      @if (canSeeAllCampuses()) {
+        <div class="flex-1 min-w-[150px]">
+          <label class="block text-xs font-medium text-[#6B7280] mb-1">Campus</label>
+          <select [(ngModel)]="filters().campus_id" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm">
+            <option [ngValue]="null">Tous les campus</option>
+            @for (campus of campuses(); track campus.id) {
+              <option [value]="campus.id">{{ campus.name }}</option>
+            }
+          </select>
+        </div>
+      }
+      <div class="flex-1 min-w-[120px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Type</label>
+        <select [(ngModel)]="filters().type" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm">
+          <option value="">Tous</option>
+          <option value="income">Entrées</option>
+          <option value="expense">Sorties</option>
+        </select>
+      </div>
+      <div class="flex-1 min-w-[120px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Mois</label>
+        <select [(ngModel)]="filters().month" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm">
+          <option [ngValue]="null">Tous</option>
+          @for (month of months; track month.value) {
+            <option [value]="month.value">{{ month.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="flex-1 min-w-[100px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Année</label>
+        <select [(ngModel)]="filters().year" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm">
+          <option [ngValue]="null">Toutes</option>
+          @for (year of years; track year) {
+            <option [value]="year">{{ year }}</option>
+          }
+        </select>
+      </div>
+      <button (click)="resetFilters()" class="px-4 py-2 text-sm text-[#6B7280] hover:text-[#15157D] hover:bg-[#E8F0FE] rounded-lg transition-colors">
+        <span class="material-symbols-outlined text-sm align-middle">refresh</span> Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <!-- Tableau des mouvements -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+    @if (loading()) {
+      <div class="flex flex-col items-center justify-center py-20">
+        <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+        <p class="text-[#6B7280] mt-4 text-sm">Chargement...</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-[#F5F7FA] border-b border-[#E5E7EB]">
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase">Date</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase">Référence</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase">Description</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase">Campus</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase">Type</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase">Montant</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#E5E7EB]">
+            @for (movement of movements(); track movement.id) {
+              <tr class="hover:bg-[#F5F7FA] transition-colors">
+                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ formatDate(movement.created_at) }}</td>
+                <td class="px-6 py-4 text-sm font-mono text-[#15157D]">{{ movement.reference }}</td>
+                <td class="px-6 py-4 text-sm text-[#0B1C30]">{{ movement.description }}</td>
+                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ movement.campus?.name || '-' }}</td>
+                <td class="px-6 py-4">
+                  <span class="px-2.5 py-1 rounded-full text-xs font-medium"
+                        [class.bg-green-100]="movement.type === 'income'"
+                        [class.text-green-700]="movement.type === 'income'"
+                        [class.bg-red-100]="movement.type === 'expense'"
+                        [class.text-red-700]="movement.type === 'expense'">
+                    {{ movement.type === 'income' ? 'Entrée' : 'Sortie' }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <span class="text-sm font-semibold"
+                        [class.text-green-600]="movement.type === 'income'"
+                        [class.text-red-600]="movement.type === 'expense'">
+                    {{ formatPrice(movement.amount) }}
+                  </span>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="text-center py-12 text-[#6B7280]">
+                  <span class="material-symbols-outlined text-5xl text-[#E5E7EB] block mb-3">account_balance</span>
+                  <p>Aucun mouvement financier</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

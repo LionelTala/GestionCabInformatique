@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { tap } from 'rxjs/operators';
 
 export interface AcademicYear {
   id: number;
@@ -11,46 +12,38 @@ export interface AcademicYear {
   is_active: boolean;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class AcademicYearService {
   private apiUrl = environment.apiUrl;
   private years = signal<AcademicYear[]>([]);
+  private currentYearId = signal<number | null>(null);
 
   constructor(private http: HttpClient) {}
 
-  getYears() {
-    return this.years.asReadonly();
-  }
+  getYears() { return this.years.asReadonly(); }
+  getCurrentYearId() { return this.currentYearId.asReadonly(); }
 
   loadYears() {
-    return this.http.get<{ data: AcademicYear[]; current_year_id: number }>(
-      `${this.apiUrl}/academic-years`
+    return this.http.get<any>(`${this.apiUrl}/academic-years`).pipe(
+      tap(response => {
+        this.years.set(response.data);
+        this.currentYearId.set(response.current_year_id);
+      })
     );
   }
 
-  refresh() {
-    this.loadYears().subscribe({
-      next: (response) => {
-        this.years.set(response.data);
-      },
-      error: () => {
-        // Géré par l'intercepteur ou le composant
-      }
-    });
-  }
-
   switchYear(yearId: number) {
-    return this.http.patch(`${this.apiUrl}/academic-years/switch`, { academic_year_id: yearId });
+    return this.http.patch(`${this.apiUrl}/academic-years/switch`, { academic_year_id: yearId }).pipe(
+      tap(() => this.currentYearId.set(yearId))
+    );
   }
 
-  create(year: Partial<AcademicYear>) {
-    return this.http.post<{ data: AcademicYear }>(`${this.apiUrl}/academic-years`, year);
+  create(data: Partial<AcademicYear>) {
+    return this.http.post(`${this.apiUrl}/academic-years`, data);
   }
 
-  update(id: number, year: Partial<AcademicYear>) {
-    return this.http.put<{ data: AcademicYear }>(`${this.apiUrl}/academic-years/${id}`, year);
+  update(id: number, data: Partial<AcademicYear>) {
+    return this.http.put(`${this.apiUrl}/academic-year/${id}`, data);
   }
 
   delete(id: number) {

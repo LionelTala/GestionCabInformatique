@@ -1,0 +1,59 @@
+<div class="verification-container">
+  
+  <!-- État de chargement -->
+  @if (isLoading) {
+    <div class="card loading-card">
+      <div class="spinner"></div>
+      <p>Vérification du document en cours...</p>
+    </div>
+  }
+
+  <!-- État d'erreur générale -->
+  @if (!isLoading && errorMessage) {
+    <div class="card error-card">
+      <span class="material-symbols-outlined icon">error</span>
+      <h2>Erreur de vérification</h2>
+      <p>{{ errorMessage }}</p>
+      <a routerLink="/" class="btn-primary">Retour à l'accueil</a>
+    </div>
+  }
+
+  <!-- État de résultat -->
+  @if (!isLoading && result) {
+    <div class="card result-card" [ngClass]="getStatusClass(result.status)">
+      
+      <!-- En-tête du statut -->
+      <div class="status-header">
+        <span class="material-symbols-outlined status-icon">{{ getStatusIcon(result.status) }}</span>
+        <h2>{{ result.message }}</h2>
+      </div>
+
+      <!-- Détails dynamiques (si le document est valide ou annulé avec des données) -->
+      @if (result.data) {
+        <div class="data-grid">
+          @for (item of getObjectEntries(result.data); track item[0]) {
+            <div class="data-row">
+              <span class="data-label">{{ formatLabel(item[0]) }} :</span>
+              <span class="data-value">{{ formatValue(item[0], item[1]) }}</span>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Pied de page de la carte -->
+      <div class="card-footer">
+        <p class="timestamp">
+          Vérifié le : {{ result.data?.verified_at || (result.data?.deleted_at) || 'N/A' }}
+        </p>
+        <a routerLink="/" class="btn-secondary">Nouvelle vérification</a>
+      </div>
+    </div>
+  }
+
+  <!-- Explication pour l'utilisateur -->
+  <div class="info-box">
+    <span class="material-symbols-outlined">info</span>
+    <p>Cette page affiche les données <strong>actuelles</strong> présentes dans notre base de données. Si un document a été annulé ou modifié après son impression, le statut reflétera cette réalité.</p>
+  </div>
+
+</div>

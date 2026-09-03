@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { ToastrService } from 'ngx-toastr';
 import { environment } from '../../../environments/environment';
+import { tap } from 'rxjs/operators';
 
 export interface User {
   id: number;
@@ -9,45 +9,48 @@ export interface User {
   last_name: string;
   email: string;
   phone?: string;
-  role: 'super_admin' | 'admin_global' | 'admin_campus' | 'secretary';
+  role: string;
   campus_id?: number;
   campus?: { id: number; name: string; city: string };
   is_active: boolean;
-  password?: string;
   created_at?: string;
-  updated_at?: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+interface Meta {
+  current_page: number;
+  last_page: number;
+  total: number;
+  per_page: number;
+}
+
+@Injectable({ providedIn: 'root' })
 export class UserService {
   private apiUrl = environment.apiUrl;
   private users = signal<User[]>([]);
+  private meta = signal<Meta>({ current_page: 1, last_page: 1, total: 0, per_page: 15 });
 
-  constructor(private http: HttpClient, private toastr: ToastrService) {}
+  constructor(private http: HttpClient) {}
 
-  getUsers() {
-    return this.users.asReadonly();
+  getUsers() { return this.users.asReadonly(); }
+  getMeta() { return this.meta.asReadonly(); }
+
+  loadUsers(page = 1, params?: Record<string, string>) {
+    return this.http.get<any>(`${this.apiUrl}/users`, {
+      params: { page, per_page: 15, ...params }
+    }).pipe(
+      tap(response => {
+        this.users.set(response.data.data);
+        this.meta.set(response.data);
+      })
+    );
   }
 
-  loadUsers() {
-    this.http.get<{ data: User[] }>(`${this.apiUrl}/users`).subscribe({
-      next: (response) => {
-        this.users.set(response.data);
-      },
-      error: (err) => {
-        this.toastr.error(err.error?.message || 'Erreur lors du chargement des utilisateurs');
-      }
-    });
+  create(data: Partial<User>) {
+    return this.http.post(`${this.apiUrl}/users`, data);
   }
 
-  create(user: Partial<User>) {
-    return this.http.post<{ data: User }>(`${this.apiUrl}/users`, user);
-  }
-
-  update(id: number, user: Partial<User>) {
-    return this.http.put<{ data: User }>(`${this.apiUrl}/users/${id}`, user);
+  update(id: number, data: Partial<User>) {
+    return this.http.put(`${this.apiUrl}/users/${id}`, data);
   }
 
   delete(id: number) {
@@ -55,10 +58,6 @@ export class UserService {
   }
 
   toggleStatus(id: number) {
-    return this.http.patch<{ data: User }>(`${this.apiUrl}/users/${id}/toggle-status`, {});
-  }
-
-  refresh() {
-    this.loadUsers();
+    return this.http.patch(`${this.apiUrl}/users/${id}/toggle-status`, {});
   }
 }

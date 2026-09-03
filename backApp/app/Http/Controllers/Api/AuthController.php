@@ -5,8 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -28,51 +29,48 @@ class AuthController extends Controller
             $lockKey = "login_locked_ip_{$ip}";
             $attemptsKey = "login_attempts_ip_{$ip}";
 
-            // Vérifier si l'IP est bloquée
             if (Cache::has($lockKey)) {
                 $ttl = Cache::get($lockKey);
                 $minutes = ceil($ttl / 60);
                 return response()->json([
-                    'message' => "Trop de tentatives depuis cette adresse IP. Réessayez dans {$minutes} minute(s).",
+                    'message' => "Trop de tentatives. Réessayez dans {$minutes} minute(s).",
                 ], 429);
             }
 
-            $user = User::where('email', $request->email)->first();
-
-            if (!$user || !Hash::check($request->password, $user->password)) {
+            if (!Auth::attempt($request->only('email', 'password'))) {
                 $attempts = Cache::get($attemptsKey, 0) + 1;
                 Cache::put($attemptsKey, $attempts, 120);
-
                 $remaining = 5 - $attempts;
 
                 if ($attempts >= 5) {
-                    Cache::put($lockKey, 600, 600); // 10 minutes
+                    Cache::put($lockKey, 600, 600);
                     Cache::forget($attemptsKey);
                     return response()->json([
-                        'message' => 'Trop de tentatives. Cette adresse IP est bloquée pour 10 minutes pour des raisons de sécurité.',
+                        'message' => 'Adresse IP bloquée pendant 10 minutes.',
                     ], 429);
                 }
 
                 return response()->json([
-                    'message' => "Les identifiants saisis sont incorrects. Il vous reste {$remaining} tentative(s) avant blocage.",
+                    'message' => "Identifiants incorrects. {$remaining} tentative(s) restante(s).",
                 ], 401);
             }
 
-            // Réinitialiser les tentatives (connexion réussie)
             Cache::forget($attemptsKey);
             Cache::forget($lockKey);
 
+            $user = Auth::user();
+
             if (!$user->is_active) {
+                Auth::logout();
                 return response()->json([
-                    'message' => 'Votre compte est désactivé. Veuillez contacter l\'administrateur.',
+                    'message' => 'Compte désactivé. Contactez l\'administrateur.',
                 ], 403);
             }
 
-            $token = $user->createToken('auth_token')->plainTextToken;
+            $campus = $user->campus;
 
             return response()->json([
                 'message' => 'Connexion réussie',
-                'token' => $token,
                 'user' => [
                     'id' => $user->id,
                     'email' => $user->email,
@@ -80,28 +78,41 @@ class AuthController extends Controller
                     'last_name' => $user->last_name,
                     'role' => $user->role,
                     'campus_id' => $user->campus_id,
+                    'campus' => $user->campus,
                 ]
             ]);
 
         } catch (ValidationException $e) {
             return response()->json([
-                'message' => 'Veuillez corriger les erreurs ci-dessous',
+                'message' => 'Veuillez corriger les erreurs',
                 'errors' => $e->errors(),
             ], 422);
         }
     }
 
+        public function me(Request $request)
+        {
+            $user = User::with('campus:id,nom,ville')->find($request->user()->id);
+
+            return response()->json([
+                'id' => $user->id,
+                'email' => $user->email,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'role' => $user->role,
+                'campus_id' => $user->campus_id,
+                'campus' => $user->campus,
+            ]);
+        }
+
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json([
-            'message' => 'Vous avez été déconnecté avec succès'
+            'message' => 'Déconnexion réussie'
         ]);
-    }
-
-    public function user(Request $request)
-    {
-        return response()->json($request->user());
     }
 }

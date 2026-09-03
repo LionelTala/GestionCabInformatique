@@ -4,23 +4,26 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideToastr } from 'ngx-toastr';
 import { routes } from './app.routes';
-import {   authInterceptor} from './core/interceptors/auth-interceptor';
-import {   loadingInterceptor} from './core/interceptors/loading-interceptor';
+import { credentialsInterceptor } from './core/interceptors/credentials-interceptor';
+import { errorInterceptor } from './core/interceptors/error-interceptor';
+import { loadingInterceptor } from './core/interceptors/loading-interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(
-      withInterceptors([authInterceptor, loadingInterceptor])
+      withInterceptors([credentialsInterceptor, errorInterceptor, loadingInterceptor])
     ),
     provideAnimations(),
     provideToastr({
       positionClass: 'toast-top-right',
-      timeOut: 3000,
+      timeOut: 5000,
       closeButton: true,
       progressBar: true,
       preventDuplicates: true,
+      maxOpened: 3,
+      newestOnTop: true,
     }),
   ]
 };

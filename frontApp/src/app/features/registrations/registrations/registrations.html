@@ -1,0 +1,379 @@
+<div>
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 animate-fade-in-up" style="animation-delay: 0.1s;">
+    <div>
+      <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#15157D] text-3xl">assignment</span>
+        Gestion des Inscriptions
+      </h1>
+      <p class="text-[#6B7280] text-sm mt-1">Consultez, imprimez ou supprimez les inscriptions</p>
+    </div>
+    @if (canManage()) {
+      <button (click)="openCreateModal()" class="bg-[#15157D] text-white px-5 py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm whitespace-nowrap">
+        <span class="material-symbols-outlined text-lg">person_add</span>
+        Nouvelle inscription
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="flex flex-col items-center justify-center py-20">
+      <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+      <p class="text-[#6B7280] mt-4 text-sm">Chargement des Inscriptions...</p>
+    </div>
+  } @else {
+
+    <!-- Filtres -->
+    <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4 mb-6">
+      <div class="flex flex-wrap items-end gap-4">
+        @if (canSeeCampus()) {
+          <div class="flex-1 min-w-[150px]">
+            <label class="block text-xs font-medium text-[#6B7280] mb-1">Campus</label>
+            <select [(ngModel)]="filters().campus_id" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
+              <option [value]="null">Tous les campus</option>
+              @for (campus of campuses(); track campus.id) { <option [value]="campus.id">{{ campus.name }}</option> }
+            </select>
+          </div>
+        }
+        <div class="flex-1 min-w-[150px]">
+          <label class="block text-xs font-medium text-[#6B7280] mb-1">Formation</label>
+          <select [(ngModel)]="filters().formation_id" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
+            <option [value]="null">Toutes les formations</option>
+            @for (formation of formations(); track formation.id) { <option [value]="formation.id">{{ formation.name }}</option> }
+          </select>
+        </div>
+        <div class="flex-1 min-w-[150px]">
+          <label class="block text-xs font-medium text-[#6B7280] mb-1">Année scolaire</label>
+          <select [(ngModel)]="filters().academic_year_id" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
+            <option [value]="null">Toutes les années</option>
+            @for (year of academicYears(); track year.id) { <option [value]="year.id">{{ year.label }}</option> }
+          </select>
+        </div>
+        <div class="flex-1 min-w-[150px]">
+          <label class="block text-xs font-medium text-[#6B7280] mb-1">Statut de paiement</label>
+          <select [(ngModel)]="filters().status" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
+            <option value="">Tous les statuts</option>
+            <option value="unpaid">Non payé</option>
+            <option value="partial">Partiel</option>
+            <option value="paid">Soldé</option>
+          </select>
+        </div>
+        <button (click)="resetFilters()" class="px-4 py-2 text-sm text-[#6B7280] hover:text-[#15157D] hover:bg-[#E8F0FE] rounded-lg transition-colors">
+          <span class="material-symbols-outlined text-sm align-middle">refresh</span> Réinitialiser
+        </button>
+      </div>
+    </div>
+
+    <!-- Tableau -->
+    <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-[#F5F7FA] border-b border-[#E5E7EB]">
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Matricule</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Étudiant</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Formation</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Campus</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Financier</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Statut</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#E5E7EB]">
+            @for (registration of registrations(); track registration.id; let i = $index) {
+              <tr class="hover:bg-[#F5F7FA] transition-colors animate-fade-in-up" [style.animation-delay]="(0.1 + (i * 0.03)) + 's'">
+                <td class="px-6 py-4">
+                  <span class="font-mono text-sm font-semibold text-[#15157D]">{{ registration.student?.registration_number || '-' }}</span>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-[#E8F0FE] flex items-center justify-center text-[#15157D] font-bold text-xs">
+                      {{ registration.student?.first_name?.[0] }}{{ registration.student?.last_name?.[0] }}
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-[#0B1C30]">{{ registration.student?.first_name }} {{ registration.student?.last_name }}</p>
+                      <p class="text-xs text-[#6B7280]">{{ registration.student?.email || '-' }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ registration.formation?.name || '-' }}</td>
+                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ registration.campus?.name || '-' }}</td>
+                <td class="px-6 py-4 text-right">
+                  <p class="text-sm font-semibold text-[#0B1C30]">{{ formatPrice(registration.initial_payment || 0) }}</p>
+                  <p class="text-xs text-[#6B7280]">Versé au total : {{ formatPrice(registration.amount_paid || 0) }}</p>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ getStatusClass(registration.payment_status || registration.status) }}">
+                    {{ getStatusLabel(registration.payment_status || registration.status) }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <!-- Voir -->
+                    <button (click)="viewRegistration(registration)" class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6B7280] hover:text-[#15157D] transition-colors" title="Voir les détails">
+                      <span class="material-symbols-outlined text-xl">visibility</span>
+                    </button>
+                    <!-- Imprimer -->
+                    <button (click)="downloadForm(registration)" [disabled]="downloading()" class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6C3CE1] hover:text-[#5A2CB8] transition-colors" title="Télécharger la fiche PDF">
+                      <span class="material-symbols-outlined text-xl">picture_as_pdf</span>
+                    </button>
+                    <!-- Supprimer -->
+                    @if (canManage()) {
+                      <button (click)="openDeleteModal(registration)" class="p-2 rounded-lg hover:bg-red-50 text-[#6B7280] hover:text-[#BB0013] transition-colors" title="Supprimer l'inscription">
+                        <span class="material-symbols-outlined text-xl">delete</span>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="text-center py-12 text-[#6B7280]">
+                  <span class="material-symbols-outlined text-5xl text-[#E5E7EB] block mb-3">assignment</span>
+                  <p>Aucune inscription enregistrée</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (meta().total > 0) {
+        <div class="flex items-center justify-between px-6 py-4 border-t border-[#E5E7EB]">
+          <div class="text-sm text-[#6B7280]">
+            Affichage de <span class="font-medium">{{ meta().from }}</span> à <span class="font-medium">{{ meta().to }}</span> sur <span class="font-medium">{{ meta().total }}</span> inscriptions
+          </div>
+          <div class="flex items-center gap-1">
+            <button (click)="goToPage(meta().current_page - 1)" [disabled]="meta().current_page === 1" class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-sm">chevron_left</span>
+            </button>
+            @for (page of getPages(); track $index) {
+              @if (page === -1) { <span class="px-2 text-[#6B7280]">…</span> }
+              @else {
+                <button (click)="goToPage(page)" [class.bg-[#15157D]]="page === meta().current_page" [class.text-white]="page === meta().current_page" [class.text-[#6B7280]]="page !== meta().current_page" [class.font-medium]="page === meta().current_page" class="w-8 h-8 rounded-lg hover:bg-[#F5F7FA] transition-colors text-sm">
+                  {{ page }}
+                </button>
+              }
+            }
+            <button (click)="goToPage(meta().current_page + 1)" [disabled]="meta().current_page === meta().last_page" class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-sm">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL CRÉATION -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showModal()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeModal()">
+      <div class="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up" (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+              <span class="material-symbols-outlined text-2xl">person_add</span>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-[#0B1C30]">Nouvelle inscription</h2>
+              <p class="text-sm text-[#6B7280]">Remplissez les informations de l'étudiant</p>
+            </div>
+          </div>
+          <button type="button" (click)="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <form (ngSubmit)="onSubmit()" enctype="multipart/form-data">
+          <div class="space-y-4">
+            <!-- Informations étudiant -->
+            <div class="bg-[#F5F7FA] rounded-xl p-4">
+              <h3 class="text-sm font-semibold text-[#0B1C30] mb-3">Informations étudiant</h3>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-[#0B1C30] mb-1">Prénom <span class="text-[#BB0013]">*</span></label>
+                  <input type="text" [(ngModel)]="formData().first_name" name="first_name" (blur)="validateFirstName()" (input)="validateFirstName()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-[#BB0013]]="errors().first_name" [class.border-[#E5E7EB]]="!errors().first_name" placeholder="Prénom" />
+                  @if (errors().first_name) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().first_name }}</p> }
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-[#0B1C30] mb-1">Nom <span class="text-[#BB0013]">*</span></label>
+                  <input type="text" [(ngModel)]="formData().last_name" name="last_name" (blur)="validateLastName()" (input)="validateLastName()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-[#BB0013]]="errors().last_name" [class.border-[#E5E7EB]]="!errors().last_name" placeholder="Nom" />
+                  @if (errors().last_name) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().last_name }}</p> }
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3 mt-3">
+                <div>
+                  <label class="block text-sm font-medium text-[#0B1C30] mb-1">Email</label>
+                  <input type="email" [(ngModel)]="formData().email" name="email" (blur)="validateEmail()" (input)="validateEmail()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-[#BB0013]]="errors().email" [class.border-[#E5E7EB]]="!errors().email" placeholder="exemple@gmail.com" />
+                  @if (errors().email) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().email }}</p> }
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-[#0B1C30] mb-1">Téléphone</label>
+                  <input type="text" [(ngModel)]="formData().phone" name="phone" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" placeholder="Numéro" />
+                </div>
+              </div>
+              <div class="mt-3">
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Date de naissance</label>
+                <input type="date" [(ngModel)]="formData().date_of_birth" name="date_of_birth" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" />
+              </div>
+              <div class="mt-3">
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Adresse</label>
+                <textarea [(ngModel)]="formData().address" name="address" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all resize-none" placeholder="Adresse complète" rows="2"></textarea>
+              </div>
+              <div class="mt-3">
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Photo d'identité</label>
+                <input type="file" (change)="onFileSelected($event)" accept="image/*" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#E8F0FE] file:text-[#15157D] hover:file:bg-[#D1E4FF]" />
+                @if (photoPreview()) {
+                  <div class="mt-2"><img [src]="photoPreview()" class="w-20 h-20 rounded-lg object-cover border border-[#E5E7EB]" alt="Aperçu photo"></div>
+                }
+              </div>
+            </div>
+
+            <!-- Parent / Tuteur -->
+            <div class="bg-[#F5F7FA] rounded-xl p-4">
+              <h3 class="text-sm font-semibold text-[#0B1C30] mb-3">Parent / Tuteur</h3>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-[#0B1C30] mb-1">Nom du parent</label>
+                  <input type="text" [(ngModel)]="formData().parent_name" name="parent_name" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" placeholder="Nom du parent" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-[#0B1C30] mb-1">Téléphone du parent</label>
+                  <input type="text" [(ngModel)]="formData().parent_phone" name="parent_phone" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" placeholder="Téléphone du parent" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Informations académiques -->
+            <div class="bg-[#F5F7FA] rounded-xl p-4">
+              <h3 class="text-sm font-semibold text-[#0B1C30] mb-3">Informations académiques</h3>
+              @if (canSeeCampus()) {
+                <div class="mb-3">
+                  <label class="block text-sm font-medium text-[#0B1C30] mb-1">Campus</label>
+                  <select [(ngModel)]="formData().campus_id" name="campus_id" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all appearance-none bg-white">
+                    <option [value]="null">Sélectionner un campus</option>
+                    @for (campus of campuses(); track campus.id) { <option [value]="campus.id">{{ campus.name }}</option> }
+                  </select>
+                </div>
+              } @else {
+                <div class="mb-3">
+                  <label class="block text-sm font-medium text-[#0B1C30] mb-1">Campus</label>
+                  <input type="text" [value]="currentUser?.campus_id ? getCampusName(currentUser.campus_id) : '-'" disabled class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl bg-[#F5F7FA] text-[#6B7280]" />
+                </div>
+              }
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Formation <span class="text-[#BB0013]">*</span></label>
+                <select [(ngModel)]="formData().formation_id" name="formation_id" (change)="onFormationChange($any($event.target).value); validateFormation()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all appearance-none bg-white" [class.border-[#BB0013]]="errors().formation_id" [class.border-[#E5E7EB]]="!errors().formation_id">
+                  <option [value]="null">Sélectionner une formation</option>
+                  @for (formation of formations(); track formation.id) { <option [value]="formation.id">{{ formation.name }} ({{ formation.abbreviation }})</option> }
+                </select>
+                @if (errors().formation_id) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().formation_id }}</p> }
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Année scolaire <span class="text-[#BB0013]">*</span></label>
+                <select [(ngModel)]="formData().academic_year_id" name="academic_year_id" (change)="validateAcademicYear()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all appearance-none bg-white" [class.border-[#BB0013]]="errors().academic_year_id" [class.border-[#E5E7EB]]="!errors().academic_year_id">
+                  <option [value]="null">Sélectionner une année</option>
+                  @for (year of academicYears(); track year.id) { <option [value]="year.id">{{ year.label }} @if (year.is_current) {(En cours)}</option> }
+                </select>
+                @if (errors().academic_year_id) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().academic_year_id }}</p> }
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Versement initial (FCFA)</label>
+                <input type="number" [(ngModel)]="formData().initial_payment" name="initial_payment" (blur)="validateInitialPayment()" (input)="validateInitialPayment()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-[#BB0013]]="errors().initial_payment" [class.border-[#E5E7EB]]="!errors().initial_payment" placeholder="0" />
+                @if (errors().initial_payment) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().initial_payment }}</p> }
+                @if (selectedFormation()) {
+                  <p class="text-xs text-[#6B7280] mt-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm text-[#15157D]">info</span>
+                    Coût total : {{ formatPrice(selectedFormation()?.tuition_fees || 0) }}
+                  </p>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3 justify-end mt-6 pt-4 border-t border-[#E5E7EB]">
+            <button type="button" (click)="closeModal()" class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">Annuler</button>
+            <button type="submit" [disabled]="submitting()" class="px-5 py-2.5 bg-[#15157D] text-white text-sm font-medium rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              @if (submitting()) {
+                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Inscription...
+              } @else {
+                <span class="material-symbols-outlined text-sm">person_add</span> Inscrire l'étudiant
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL DÉTAILS -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showDetailModal() && selectedRegistration()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeDetailModal()">
+      <div class="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up" (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+              <span class="material-symbols-outlined text-2xl">assignment</span>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-[#0B1C30]">Détails de l'inscription</h2>
+              <p class="text-sm text-[#6B7280]">Matricule: {{ selectedRegistration()?.student?.registration_number }}</p>
+            </div>
+          </div>
+          <button type="button" (click)="closeDetailModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div><p class="text-xs text-[#6B7280]">Étudiant</p><p class="font-medium text-[#0B1C30]">{{ selectedRegistration()?.student?.first_name }} {{ selectedRegistration()?.student?.last_name }}</p></div>
+            <div><p class="text-xs text-[#6B7280]">Formation</p><p class="font-medium text-[#0B1C30]">{{ selectedRegistration()?.formation?.name }}</p></div>
+            <div><p class="text-xs text-[#6B7280]">Coût total formation</p><p class="font-medium text-[#0B1C30]">{{ formatPrice(selectedRegistration()?.formation?.tuition_fees || 0) }}</p></div>
+            <div><p class="text-xs text-[#6B7280]">Montant total versé</p><p class="font-medium text-green-700">{{ formatPrice(selectedRegistration()?.amount_paid || 0) }}</p></div>
+            <div><p class="text-xs text-[#6B7280]">Reste à payer</p><p class="font-medium text-[#BB0013]">{{ formatPrice((selectedRegistration()?.formation?.tuition_fees || 0) - (selectedRegistration()?.amount_paid || 0)) }}</p></div>
+            <div><p class="text-xs text-[#6B7280]">Statut</p><span class="px-2.5 py-1 rounded-full text-xs font-medium {{ getStatusClass(selectedRegistration()?.payment_status || selectedRegistration()?.status) }}">{{ getStatusLabel(selectedRegistration()?.payment_status || selectedRegistration()?.status) }}</span></div>
+          </div>
+          <div class="pt-4 border-t border-[#E5E7EB]">
+            <p class="text-xs text-[#6B7280]">Date d'inscription</p>
+            <p class="font-medium text-[#0B1C30]">{{ formatDate(selectedRegistration()?.created_at) }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL SUPPRESSION -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showDeleteModal()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeDeleteModal()">
+      <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-slide-up" (click)="$event.stopPropagation()">
+        <div class="flex flex-col items-center text-center">
+          <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-[#BB0013] mb-4">
+            <span class="material-symbols-outlined text-4xl">delete_forever</span>
+          </div>
+          <h2 class="text-xl font-bold text-[#0B1C30]">Confirmer la suppression</h2>
+          <p class="text-[#6B7280] text-sm mt-2">
+            Êtes-vous sûr de vouloir supprimer l'inscription de 
+            <span class="font-semibold text-[#0B1C30]">{{ registrationToDelete()?.student?.first_name }} {{ registrationToDelete()?.student?.last_name }}</span> ?
+          </p>
+          <p class="text-xs text-[#6B7280] mt-1">Cette action rendra le document PDF caduc et est irréversible.</p>
+        </div>
+        <div class="flex gap-3 justify-center mt-6 pt-4 border-t border-[#E5E7EB]">
+          <button type="button" (click)="closeDeleteModal()" class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">Annuler</button>
+          <button type="button" (click)="confirmDelete()" [disabled]="submitting()" class="px-5 py-2.5 bg-[#BB0013] text-white text-sm font-medium rounded-xl hover:bg-[#93000D] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            @if (submitting()) {
+              <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Suppression...
+            } @else {
+              <span class="material-symbols-outlined text-sm">delete</span> Supprimer
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

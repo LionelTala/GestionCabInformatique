@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
@@ -10,6 +10,7 @@ import { Auth } from '../../../core/services/auth';
   selector: 'app-login',
   styleUrl: './login.css',
   templateUrl: './login.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Login {
   email = '';
@@ -31,13 +32,12 @@ export class Login {
   }
 
   validateEmail(): boolean {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!this.email) {
-      this.emailError.set('L\'email est requis');
+      this.emailError.set("L'email est requis");
       return false;
     }
-    if (!emailRegex.test(this.email)) {
-      this.emailError.set('Veuillez entrer un email valide');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email)) {
+      this.emailError.set('Email invalide');
       return false;
     }
     this.emailError.set('');
@@ -50,7 +50,7 @@ export class Login {
       return false;
     }
     if (this.password.length < 6) {
-      this.passwordError.set('Le mot de passe doit contenir au moins 6 caractères');
+      this.passwordError.set('6 caractères minimum');
       return false;
     }
     this.passwordError.set('');
@@ -58,28 +58,21 @@ export class Login {
   }
 
   onSubmit() {
-    const isEmailValid = this.validateEmail();
-    const isPasswordValid = this.validatePassword();
-
-    if (!isEmailValid || !isPasswordValid) {
-      this.toastr.warning('Veuillez corriger les champs indiqués', 'Formulaire invalide');
-      return;
-    }
+    if (!this.validateEmail() || !this.validatePassword()) return;
 
     this.loading.set(true);
     this.errorMessage.set('');
 
     this.auth.login(this.email, this.password).subscribe({
-      next: (response: any) => {
+      next: () => {
         this.loading.set(false);
-        this.auth.setSession(response.token, response.user);
         this.toastr.success('Connexion réussie !', 'Bienvenue');
         this.router.navigate(['/dashboard']);
       },
-      error: (err) => {
+      error: (err: any) => {
         this.loading.set(false);
-        this.errorMessage.set(err.error?.message || 'Identifiants incorrects');
-        this.toastr.error(this.errorMessage(), 'Erreur de connexion');
+        const msg = err.error?.error?.message || err.error?.message || 'Identifiants incorrects';
+        this.errorMessage.set(msg);
       }
     });
   }

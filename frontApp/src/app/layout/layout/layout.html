@@ -2,13 +2,11 @@
 @if (loadingService.isLoading()) {
   <div class="fixed inset-0 bg-[#0B1C30]/30 backdrop-blur-md z-[999] flex items-center justify-center animate-fade-in">
     <div class="bg-white/90 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-[0_20px_50px_rgba(21,21,125,0.15)] flex flex-col items-center animate-scale-up">
-      
       <div class="relative w-14 h-14 flex items-center justify-center">
         <div class="absolute inset-0 border-4 border-[#15157D]/10 rounded-full"></div>
         <div class="absolute inset-0 border-4 border-transparent border-t-[#15157D] border-r-[#15157D] rounded-full animate-spin"></div>
         <div class="w-3 h-3 bg-[#15157D] rounded-full animate-pulse"></div>
       </div>
-
       <p class="text-[#0B1C30] mt-4 text-sm font-semibold tracking-wide">Chargement en cours...</p>
       <p class="text-[#6B7280] text-xs mt-0.5">Veuillez patienter un instant</p>
     </div>
@@ -16,16 +14,15 @@
 }
 
 <div class="min-h-screen bg-[#F8F9FF]">
-  
+
   <!-- Sidebar -->
-  <aside 
+  <aside
     [class.-translate-x-full]="!sidebarOpen()"
     class="fixed left-0 top-0 h-full w-72 bg-white z-50 flex flex-col shadow-[0_1px_8px_rgba(46,49,146,0.05)] transition-transform duration-300 md:translate-x-0"
   >
-    <!-- Logo -->
     <div class="px-6 py-5 flex items-center gap-3 border-b border-[#E5E7EB]">
       <div class="h-10 w-10 bg-gradient-to-br from-[#15157D] to-[#2E3192] rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md">
-        AB
+        CAB
       </div>
       <div>
         <span class="text-[#15157D] text-lg font-bold block leading-tight">CAB Admin</span>
@@ -36,14 +33,14 @@
       </button>
     </div>
 
-    <!-- Navigation dynamique filtrée -->
     <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
       @for (item of visibleNavItems(); track item.route) {
-        <a 
+        <a
           [routerLink]="[item.route]"
+          (click)="closeSidebarOnMobile()"
           routerLinkActive="bg-[#E1E0FF] text-[#15157D] font-bold"
-          [class.text-[#464652]]="!isActive(item.route)"
-          class="flex items-center px-4 py-3 rounded-lg hover:bg-[#E5EEFF] hover:text-[#0B1C30] transition-all group"
+          [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
+          class="flex items-center px-4 py-3 rounded-lg hover:bg-[#E5EEFF] hover:text-[#0B1C30] transition-all group text-[#464652]"
         >
           <span class="material-symbols-outlined mr-3 group-hover:scale-110 transition-transform">{{ item.icon }}</span>
           {{ item.label }}
@@ -51,7 +48,6 @@
       }
     </nav>
 
-    <!-- Profil -->
     <div class="p-4 border-t border-[#E5E7EB]">
       <div class="flex items-center gap-3 p-3 rounded-xl bg-[#F5F7FA] hover:bg-[#E5EEFF] transition-colors cursor-pointer" (click)="logout()">
         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#15157D] to-[#2E3192] flex items-center justify-center text-white text-sm font-bold shadow-md">
@@ -59,52 +55,44 @@
         </div>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold text-[#0B1C30] truncate">{{ user()?.first_name }} {{ user()?.last_name }}</p>
-          <p class="text-xs text-[#6B7280] truncate">{{ user()?.role }}</p>
+          <p class="text-xs text-[#6B7280] truncate">{{ getRoleLabel(user()?.role) }}</p>
         </div>
         <span class="material-symbols-outlined text-[#6B7280] text-sm hover:text-[#BB0013] transition-colors">logout</span>
       </div>
     </div>
   </aside>
 
-  <!-- Overlay mobile -->
   @if (sidebarOpen()) {
     <div class="fixed inset-0 bg-black/30 z-40 md:hidden" (click)="toggleSidebar()"></div>
   }
 
-  <!-- Contenu principal -->
   <div class="md:pl-72">
-    
-    <!-- Header -->
+
     <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[#E5E7EB]">
       <div class="flex items-center justify-between px-6 h-20">
-        
-        <!-- Gauche -->
+
         <div class="flex items-center gap-4">
           <button (click)="toggleSidebar()" class="md:hidden text-[#0B1C30] p-2 hover:bg-[#F5F7FA] rounded-lg transition-colors">
             <span class="material-symbols-outlined">menu</span>
           </button>
-          
           <div>
             <h1 class="text-xl font-bold text-[#0B1C30]">AB Informatique</h1>
             <p class="text-xs text-[#6B7280] hidden sm:block">Centre de Formation</p>
           </div>
         </div>
 
-        <!-- Centre - Dropdown Année stylé -->
         <div class="hidden md:flex items-center gap-3 bg-[#F5F7FA] px-5 py-2.5 rounded-xl border border-[#E5E7EB] hover:border-[#15157D]/30 transition-all">
           <span class="material-symbols-outlined text-[#15157D] text-base">event_note</span>
           <span class="text-sm font-medium text-[#6B7280]">Année :</span>
           <div class="relative">
-            <select 
+            <select
               [value]="currentYearId()"
               (change)="switchYear($any($event.target).value)"
               [disabled]="isSwitching()"
               class="appearance-none bg-transparent text-base font-semibold text-[#15157D] focus:outline-none cursor-pointer pr-8 py-0.5 disabled:opacity-50"
             >
               @for (year of years(); track year.id) {
-                <option [value]="year.id" [class.font-bold]="year.is_current">
-                  {{ year.label }}
-                </option>
+                <option [value]="year.id">{{ year.label }}</option>
               }
             </select>
             <span class="material-symbols-outlined absolute right-0 top-1/2 -translate-y-1/2 text-[#6B7280] text-lg pointer-events-none">expand_more</span>
@@ -116,21 +104,55 @@
           }
         </div>
 
-        <!-- Droite -->
         <div class="flex items-center gap-3">
-          
-          <!-- Notifications -->
-          <div class="relative">
-            <button class="p-2.5 rounded-xl hover:bg-[#F5F7FA] transition-colors relative">
+
+          <div class="relative notif-zone">
+            <button
+              (click)="toggleNotifications()"
+              class="p-2.5 rounded-xl hover:bg-[#F5F7FA] transition-colors relative"
+            >
               <span class="material-symbols-outlined text-[#6B7280]">notifications</span>
-              <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-[#BB0013] rounded-full border-2 border-white animate-pulse"></span>
+              @if (unreadCount() > 0) {
+                <span class="absolute -top-1 -right-1 w-5 h-5 bg-[#BB0013] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+                  {{ unreadCount() > 9 ? '9+' : unreadCount() }}
+                </span>
+              }
             </button>
+
+            @if (showNotifications()) {
+              <div class="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-[#E5E7EB] z-50 max-h-[400px] flex flex-col animate-fade-in">
+                <div class="p-3 border-b border-[#E5E7EB] flex justify-between items-center">
+                  <span class="font-semibold text-[#0B1C30]">Notifications</span>
+                  @if (unreadCount() > 0) {
+                    <button (click)="markAllAsRead()" class="text-xs text-[#4F8FFF] hover:underline">Tout marquer comme lu</button>
+                  }
+                </div>
+                <div class="overflow-y-auto flex-1">
+                  @if (notifications().length === 0) {
+                    <div class="text-center py-8 text-[#6B7280] text-sm">
+                      <span class="material-symbols-outlined text-4xl block mb-2 text-[#E5E7EB]">notifications_off</span>
+                      Aucune notification
+                    </div>
+                  } @else {
+                    @for (notif of notifications(); track notif.id) {
+                      <div
+                        class="p-3 border-b border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors cursor-pointer"
+                        [class.bg-[#E8F0FE]]="!notif.is_read"
+                        (click)="markAsRead(notif.id)"
+                      >
+                        <p class="text-sm font-medium text-[#0B1C30]">{{ notif.title }}</p>
+                        <p class="text-xs text-[#6B7280]">{{ notif.message }}</p>
+                        <p class="text-[10px] text-[#9CA3AF] mt-1">{{ formatDate(notif.created_at) }}</p>
+                      </div>
+                    }
+                  }
+                </div>
+              </div>
+            }
           </div>
 
-          <!-- Séparateur -->
           <div class="h-8 w-px bg-[#E5E7EB] hidden sm:block"></div>
 
-          <!-- Profil utilisateur -->
           <div class="flex items-center gap-3 cursor-pointer group">
             <div class="relative">
               <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#15157D] to-[#2E3192] flex items-center justify-center text-white text-sm font-bold shadow-md group-hover:shadow-lg transition-shadow">
@@ -140,7 +162,7 @@
             </div>
             <div class="hidden sm:block">
               <p class="text-sm font-semibold text-[#0B1C30] leading-tight">{{ user()?.first_name }} {{ user()?.last_name }}</p>
-              <p class="text-xs text-[#6B7280]">{{ user()?.role }}</p>
+              <p class="text-xs text-[#6B7280]">{{ getRoleLabel(user()?.role) }}</p>
             </div>
             <button (click)="logout()" class="p-2 rounded-xl hover:bg-[#F5F7FA] transition-colors text-[#6B7280] hover:text-[#BB0013]" title="Déconnexion">
               <span class="material-symbols-outlined text-sm">logout</span>
@@ -149,12 +171,11 @@
         </div>
       </div>
 
-      <!-- Version mobile du dropdown année -->
       <div class="md:hidden px-6 pb-3 flex items-center gap-2 bg-white/80">
         <span class="material-symbols-outlined text-[#15157D] text-sm">event_note</span>
         <span class="text-sm font-medium text-[#6B7280]">Année :</span>
         <div class="relative flex-1 max-w-[180px]">
-          <select 
+          <select
             [value]="currentYearId()"
             (change)="switchYear($any($event.target).value)"
             [disabled]="isSwitching()"
@@ -169,7 +190,6 @@
       </div>
     </header>
 
-    <!-- Page content -->
     <main class="p-6">
       <router-outlet></router-outlet>
     </main>

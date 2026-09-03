@@ -1,18 +1,22 @@
-import { Component, signal, OnInit, inject, computed } from '@angular/core';
+import { Component, signal, OnInit, inject, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { UserService, User } from '../../../core/services/user';
-import { CampusService, Campus } from '../../../core/services/campus';
+import { CampusService } from '../../../core/services/campus';
 import { Auth } from '../../../core/services/auth';
 
-type UserRole = 'super_admin' | 'admin_global' | 'admin_campus' | 'secretary';
+type FormErrors = Partial<{
+  first_name: string; last_name: string; email: string;
+  phone: string; password: string; campus_id: string;
+}>;
 
 @Component({
   imports: [CommonModule, FormsModule],
   selector: 'app-users',
   styleUrl: './users.css',
   templateUrl: './users.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Users implements OnInit {
   private userService = inject(UserService);
@@ -21,179 +25,116 @@ export class Users implements OnInit {
   private toastr = inject(ToastrService);
 
   users = this.userService.getUsers();
+  meta = this.userService.getMeta();
   campuses = this.campusService.getCampuses();
   currentUser = this.auth.getUser();
 
-  loading = signal(true);
+  loading = signal(false);
   submitting = signal(false);
+  togglingId = signal<number | null>(null);
+  currentPage = signal(1);
+  searchTerm = signal('');
 
-  // Modal principal
   showModal = signal(false);
   isEditing = signal(false);
   selectedUser = signal<User | null>(null);
 
-  // Modal de confirmation
   showDeleteModal = signal(false);
   userToDelete = signal<User | null>(null);
 
-  errors = signal({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    password: '',
-    campus_id: '',
-  });
+  errors = signal<FormErrors>({});
 
   availableRoles = computed(() => {
-    const user = this.currentUser;
-    if (!user) return [];
-
-    switch (user.role) {
-      case 'super_admin':
-        return [
-          { value: 'admin_global' as UserRole, label: 'Admin Global' },
-          { value: 'admin_campus' as UserRole, label: 'Admin Campus' },
-          { value: 'secretary' as UserRole, label: 'Secrétaire' },
-        ];
-      case 'admin_global':
-        return [
-          { value: 'admin_global' as UserRole, label: 'Admin Global' },
-          { value: 'admin_campus' as UserRole, label: 'Admin Campus' },
-          { value: 'secretary' as UserRole, label: 'Secrétaire' },
-        ];
-      case 'admin_campus':
-        return [
-          { value: 'secretary' as UserRole, label: 'Secrétaire' },
-        ];
-      default:
-        return [];
+    const role = this.currentUser?.role;
+    if (!role) return [];
+    if (role === 'super_admin' || role === 'admin_global') {
+      return [
+        { value: 'admin_global', label: 'Admin Global' },
+        { value: 'admin_campus', label: 'Admin Campus' },
+        { value: 'secretary', label: 'Secrétaire' },
+      ];
     }
+    if (role === 'admin_campus') {
+      return [{ value: 'secretary', label: 'Secrétaire' }];
+    }
+    return [];
+  });
+
+  pages = computed(() => {
+    const m = this.meta();
+    const current = m.current_page;
+    const last = m.last_page;
+    let start = Math.max(1, current - 2);
+    let end = Math.min(last, start + 4);
+    if (end - start < 4) start = Math.max(1, end - 4);
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   });
 
   formData = signal({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    role: '' as string,
-    campus_id: null as number | null,
-    password: '',
-    is_active: true
+    first_name: '', last_name: '', email: '', phone: '',
+    role: 'secretary', campus_id: null as number | null,
+    password: '', is_active: true
   });
 
   ngOnInit() {
-    this.loading.set(true);
-    this.userService.loadUsers();
+    this.loadUsers();
     this.campusService.loadCampuses();
-    this.loading.set(false);
   }
 
-  // === VALIDATIONS ===
-  validateFirstName(): boolean {
-    const value = this.formData().first_name.trim();
-    if (!value) {
-      this.errors.update(e => ({ ...e, first_name: 'Le prénom est obligatoire' }));
-      return false;
-    }
-    if (value.length < 2) {
-      this.errors.update(e => ({ ...e, first_name: 'Le prénom doit contenir au moins 2 caractères' }));
-      return false;
-    }
-    this.errors.update(e => ({ ...e, first_name: '' }));
-    return true;
+  loadUsers() {
+    this.loading.set(true);
+    const params: Record<string, string> = {};
+if (this.searchTerm().trim()) params['search'] = this.searchTerm().trim();    this.userService.loadUsers(this.currentPage(), params).subscribe({
+      complete: () => this.loading.set(false),
+      error: () => this.loading.set(false)
+    });
   }
 
-  validateLastName(): boolean {
-    const value = this.formData().last_name.trim();
-    if (!value) {
-      this.errors.update(e => ({ ...e, last_name: 'Le nom est obligatoire' }));
-      return false;
-    }
-    if (value.length < 2) {
-      this.errors.update(e => ({ ...e, last_name: 'Le nom doit contenir au moins 2 caractères' }));
-      return false;
-    }
-    this.errors.update(e => ({ ...e, last_name: '' }));
-    return true;
+  changePage(page: number) {
+    this.currentPage.set(page);
+    this.loadUsers();
   }
 
-  validateEmail(): boolean {
-    const value = this.formData().email.trim();
-    if (!value) {
-      this.errors.update(e => ({ ...e, email: 'L\'email est obligatoire' }));
-      return false;
-    }
-    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) {
-      this.errors.update(e => ({ ...e, email: 'Veuillez saisir un email valide' }));
-      return false;
-    }
-    this.errors.update(e => ({ ...e, email: '' }));
-    return true;
+  onSearch() {
+    this.currentPage.set(1);
+    this.loadUsers();
   }
 
-  validatePhone(): boolean {
-    const value = this.formData().phone.trim();
-    if (value && !/^[0-9+\-\s]{8,20}$/.test(value)) {
-      this.errors.update(e => ({ ...e, phone: 'Numéro invalide (8-20 caractères)' }));
-      return false;
+  validate(): boolean {
+    const d = this.formData();
+    const e: FormErrors = {};
+
+    if (!d.first_name.trim()) e.first_name = 'Le prénom est obligatoire';
+    else if (d.first_name.trim().length < 2) e.first_name = 'Minimum 2 caractères';
+
+    if (!d.last_name.trim()) e.last_name = 'Le nom est obligatoire';
+    else if (d.last_name.trim().length < 2) e.last_name = 'Minimum 2 caractères';
+
+    if (!d.email.trim()) e.email = "L'email est obligatoire";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email.trim())) e.email = 'Email invalide';
+
+    if (d.phone.trim() && !/^[0-9+\-\s]{8,20}$/.test(d.phone.trim())) {
+      e.phone = 'Numéro invalide';
     }
-    this.errors.update(e => ({ ...e, phone: '' }));
-    return true;
+
+    if (!this.isEditing() && !d.password) e.password = 'Le mot de passe est obligatoire';
+    else if (d.password && d.password.length < 6) e.password = 'Minimum 6 caractères';
+
+    if (['admin_campus', 'secretary'].includes(d.role) && !d.campus_id) {
+      e.campus_id = 'Le campus est obligatoire pour ce rôle';
+    }
+
+    this.errors.set(e);
+    return Object.keys(e).length === 0;
   }
 
-  validatePassword(): boolean {
-    if (this.isEditing()) {
-      this.errors.update(e => ({ ...e, password: '' }));
-      return true;
-    }
-    const value = this.formData().password;
-    if (!value) {
-      this.errors.update(e => ({ ...e, password: 'Le mot de passe est obligatoire' }));
-      return false;
-    }
-    if (value.length < 6) {
-      this.errors.update(e => ({ ...e, password: 'Le mot de passe doit contenir au moins 6 caractères' }));
-      return false;
-    }
-    this.errors.update(e => ({ ...e, password: '' }));
-    return true;
-  }
-
-  validateCampus(): boolean {
-    const role = this.formData().role;
-    if (['admin_campus', 'secretary'].includes(role) && !this.formData().campus_id) {
-      this.errors.update(e => ({ ...e, campus_id: 'Le campus est obligatoire pour ce rôle' }));
-      return false;
-    }
-    this.errors.update(e => ({ ...e, campus_id: '' }));
-    return true;
-  }
-
-  validateForm(): boolean {
-    const isFirstNameValid = this.validateFirstName();
-    const isLastNameValid = this.validateLastName();
-    const isEmailValid = this.validateEmail();
-    const isPhoneValid = this.validatePhone();
-    const isPasswordValid = this.validatePassword();
-    const isCampusValid = this.validateCampus();
-    return isFirstNameValid && isLastNameValid && isEmailValid && isPhoneValid && isPasswordValid && isCampusValid;
-  }
-
-  // === MODAL PRINCIPAL ===
   openCreateModal() {
     this.isEditing.set(false);
     this.selectedUser.set(null);
-    this.errors.set({ first_name: '', last_name: '', email: '', phone: '', password: '', campus_id: '' });
+    this.errors.set({});
     this.formData.set({
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: '',
-      role: 'secretary',
-      campus_id: null,
-      password: '',
-      is_active: true
+      first_name: '', last_name: '', email: '', phone: '',
+      role: 'secretary', campus_id: null, password: '', is_active: true
     });
     this.showModal.set(true);
   }
@@ -201,159 +142,87 @@ export class Users implements OnInit {
   openEditModal(user: User) {
     this.isEditing.set(true);
     this.selectedUser.set(user);
-    this.errors.set({ first_name: '', last_name: '', email: '', phone: '', password: '', campus_id: '' });
-
-    const currentRole = user.role;
-
+    this.errors.set({});
     this.formData.set({
-      first_name: user.first_name,
-      last_name: user.last_name,
-      email: user.email,
-      phone: user.phone || '',
-      role: currentRole,
-      campus_id: user.campus_id || null,
-      password: '',
-      is_active: user.is_active
+      first_name: user.first_name, last_name: user.last_name,
+      email: user.email, phone: user.phone || '',
+      role: user.role, campus_id: user.campus_id || null,
+      password: '', is_active: user.is_active
     });
-
     this.showModal.set(true);
   }
 
   closeModal() {
     this.showModal.set(false);
-    this.errors.set({ first_name: '', last_name: '', email: '', phone: '', password: '', campus_id: '' });
+    this.errors.set({});
   }
 
   onSubmit() {
-    if (!this.validateForm()) {
-      this.toastr.warning('Veuillez corriger les erreurs du formulaire');
-      return;
-    }
+    if (!this.validate()) return;
 
-    const data = this.formData();
     this.submitting.set(true);
+    const d = this.formData();
+    const data: any = { first_name: d.first_name, last_name: d.last_name, email: d.email, phone: d.phone, is_active: d.is_active };
 
-    if (this.isEditing() && this.selectedUser()) {
-      const updateData: any = {
-        first_name: data.first_name,
-        last_name: data.last_name,
-        email: data.email,
-        phone: data.phone,
-        is_active: data.is_active
-      };
+    if (this.isEditing()) {
+      if (d.role) data.role = d.role;
+      if (d.campus_id) data.campus_id = d.campus_id;
+      if (d.password) data.password = d.password;
 
-      if (data.role) {
-        updateData.role = data.role as UserRole;
-      }
-
-      if (data.campus_id) {
-        updateData.campus_id = data.campus_id;
-      }
-
-      if (data.password) {
-        updateData.password = data.password;
-      }
-
-      this.userService.update(this.selectedUser()!.id, updateData).subscribe({
-        next: () => {
-          this.toastr.success('Utilisateur modifié avec succès');
-          this.closeModal();
-          this.userService.refresh();
-          this.submitting.set(false);
-        },
-        error: (err) => {
-          const message = err.error?.message || 'Erreur lors de la modification';
-          this.toastr.error(message);
-          this.submitting.set(false);
-        }
+      this.userService.update(this.selectedUser()!.id, data).subscribe({
+        next: () => { this.toastr.success('Utilisateur modifié'); this.closeModal(); this.loadUsers(); this.submitting.set(false); },
+        error: (err: any) => this.handleError(err)
       });
     } else {
-      const createData: any = {
-        first_name: data.first_name,
-        last_name: data.last_name,
-        email: data.email,
-        phone: data.phone,
-        role: data.role as UserRole,
-        is_active: data.is_active,
-        password: data.password
-      };
+      data.role = d.role;
+      if (d.campus_id) data.campus_id = d.campus_id;
+      data.password = d.password;
 
-      if (data.campus_id) {
-        createData.campus_id = data.campus_id;
-      }
-
-      this.userService.create(createData).subscribe({
-        next: () => {
-          this.toastr.success('Utilisateur créé avec succès');
-          this.closeModal();
-          this.userService.refresh();
-          this.submitting.set(false);
-        },
-        error: (err) => {
-          const message = err.error?.message || 'Erreur lors de la création';
-          this.toastr.error(message);
-          this.submitting.set(false);
-        }
+      this.userService.create(data).subscribe({
+        next: () => { this.toastr.success('Utilisateur créé'); this.closeModal(); this.loadUsers(); this.submitting.set(false); },
+        error: (err: any) => this.handleError(err)
       });
     }
   }
 
-  // === MODAL DE CONFIRMATION SUPPRESSION ===
-  openDeleteModal(user: User) {
-    this.userToDelete.set(user);
-    this.showDeleteModal.set(true);
+  private handleError(err: any) {
+    if (err.status === 422 && err.error?.errors) {
+      const e: FormErrors = {};
+      for (const [key, msg] of Object.entries(err.error.errors)) {
+        if (['first_name', 'last_name', 'email', 'phone', 'password', 'campus_id'].includes(key)) {
+          e[key as keyof FormErrors] = Array.isArray(msg) ? msg[0] : msg as string;
+        }
+      }
+      this.errors.set(e);
+    } else {
+      this.toastr.error(err.error?.message || 'Erreur');
+    }
+    this.submitting.set(false);
   }
 
-  closeDeleteModal() {
-    this.showDeleteModal.set(false);
-    this.userToDelete.set(null);
-  }
+  openDeleteModal(user: User) { this.userToDelete.set(user); this.showDeleteModal.set(true); }
+  closeDeleteModal() { this.showDeleteModal.set(false); this.userToDelete.set(null); }
 
   confirmDelete() {
     const user = this.userToDelete();
     if (!user) return;
-
     this.submitting.set(true);
     this.userService.delete(user.id).subscribe({
-      next: () => {
-        this.toastr.success('Utilisateur supprimé avec succès');
-        this.closeDeleteModal();
-        this.userService.refresh();
-        this.submitting.set(false);
-      },
-      error: (err) => {
-        this.toastr.error(err.error?.message || 'Erreur lors de la suppression');
-        this.submitting.set(false);
-      }
+      next: () => { this.toastr.success('Utilisateur supprimé'); this.closeDeleteModal(); this.loadUsers(); this.submitting.set(false); },
+      error: () => this.submitting.set(false)
     });
   }
 
   toggleStatus(user: User) {
+    this.togglingId.set(user.id);
     this.userService.toggleStatus(user.id).subscribe({
-      next: () => {
-        const status = !user.is_active ? 'activé' : 'désactivé';
-        this.toastr.success(`Utilisateur ${status} avec succès`);
-        this.userService.refresh();
-      },
-      error: (err) => {
-        this.toastr.error(err.error?.message || 'Erreur lors du changement de statut');
-      }
+      next: () => this.loadUsers(),
+      error: () => this.togglingId.set(null),
+      complete: () => this.togglingId.set(null)
     });
   }
 
   getRoleLabel(role: string): string {
-    const labels: Record<string, string> = {
-      super_admin: 'Super Admin',
-      admin_global: 'Admin Global',
-      admin_campus: 'Admin Campus',
-      secretary: 'Secrétaire'
-    };
-    return labels[role] || role;
-  }
-
-  getCampusName(campusId: number | undefined): string {
-    if (!campusId) return '-';
-    const campus = this.campuses().find(c => c.id === campusId);
-    return campus ? campus.name : '-';
+    return { super_admin: 'Super Admin', admin_global: 'Admin Global', admin_campus: 'Admin Campus', secretary: 'Secrétaire' }[role] || role;
   }
 }

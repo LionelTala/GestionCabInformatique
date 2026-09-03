@@ -1,15 +1,18 @@
-import { Component, signal, OnInit, inject } from '@angular/core';
+import { Component, signal, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { FormationService, Formation } from '../../../core/services/formation';
 import { Auth } from '../../../core/services/auth';
 
+type FormErrors = Partial<{ name: string; abbreviation: string; tuition_fees: string; duration_months: string }>;
+
 @Component({
   imports: [CommonModule, FormsModule],
   selector: 'app-formations',
   styleUrl: './formations.css',
   templateUrl: './formations.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Formations implements OnInit {
   private formationService = inject(FormationService);
@@ -18,220 +21,121 @@ export class Formations implements OnInit {
 
   formations = this.formationService.getFormations();
   currentUser = this.auth.getUser();
+  loading = signal(false);
   submitting = signal(false);
+  togglingId = signal<number | null>(null);
 
-  // Modal principal
   showModal = signal(false);
   isEditing = signal(false);
   selectedFormation = signal<Formation | null>(null);
-
-  // Modal de confirmation
   showDeleteModal = signal(false);
   formationToDelete = signal<Formation | null>(null);
 
-  // Formulaire
-  formData = signal({
-    name: '',
-    abbreviation: '',
-    tuition_fees: 0,
-    duration_months: 0,
-    is_active: true
-  });
+  errors = signal<FormErrors>({});
 
-  // Erreurs
-  errors = signal({
-    name: '',
-    abbreviation: '',
-    tuition_fees: '',
-    duration_months: '',
+  formData = signal({
+    name: '', abbreviation: '', tuition_fees: 0, duration_months: 0, is_active: true
   });
 
   ngOnInit() {
-    this.formationService.refresh();
+    this.loadFormations();
   }
 
-  // === VALIDATIONS ===
-  validateName(): boolean {
-    const value = this.formData().name.trim();
-    if (!value) {
-      this.errors.update(e => ({ ...e, name: 'Le nom de la formation est obligatoire' }));
-      return false;
-    }
-    if (value.length < 3) {
-      this.errors.update(e => ({ ...e, name: 'Le nom doit contenir au moins 3 caractères' }));
-      return false;
-    }
-    this.errors.update(e => ({ ...e, name: '' }));
-    return true;
+  loadFormations() {
+    this.loading.set(true);
+    this.formationService.loadFormations().subscribe({
+      complete: () => this.loading.set(false),
+      error: () => this.loading.set(false)
+    });
   }
 
-  validateAbbreviation(): boolean {
-    const value = this.formData().abbreviation.trim().toUpperCase();
-    if (!value) {
-      this.errors.update(e => ({ ...e, abbreviation: 'L\'abréviation est obligatoire' }));
-      return false;
-    }
-    if (value.length < 2 || value.length > 10) {
-      this.errors.update(e => ({ ...e, abbreviation: 'L\'abréviation doit contenir entre 2 et 10 caractères' }));
-      return false;
-    }
-    this.errors.update(e => ({ ...e, abbreviation: '' }));
-    return true;
+  validate(): boolean {
+    const d = this.formData();
+    const e: FormErrors = {};
+
+    if (!d.name.trim()) e.name = 'Le nom est obligatoire';
+    else if (d.name.trim().length < 3) e.name = 'Minimum 3 caractères';
+
+    if (!d.abbreviation.trim()) e.abbreviation = "L'abréviation est obligatoire";
+    else if (d.abbreviation.trim().length < 2 || d.abbreviation.trim().length > 10) e.abbreviation = 'Entre 2 et 10 caractères';
+
+    if (!d.tuition_fees || d.tuition_fees <= 0) e.tuition_fees = 'Les frais sont obligatoires';
+
+    if (!d.duration_months || d.duration_months < 1) e.duration_months = 'Minimum 1 mois';
+
+    this.errors.set(e);
+    return Object.keys(e).length === 0;
   }
 
-  validateTuitionFees(): boolean {
-    const value = this.formData().tuition_fees;
-    if (value === null || value === undefined || value === 0) {
-      this.errors.update(e => ({ ...e, tuition_fees: 'Les frais de scolarité sont obligatoires' }));
-      return false;
-    }
-    if (value < 0) {
-      this.errors.update(e => ({ ...e, tuition_fees: 'Les frais ne peuvent pas être négatifs' }));
-      return false;
-    }
-    this.errors.update(e => ({ ...e, tuition_fees: '' }));
-    return true;
-  }
-
-  validateDuration(): boolean {
-    const value = this.formData().duration_months;
-    if (value === null || value === undefined || value === 0) {
-      this.errors.update(e => ({ ...e, duration_months: 'La durée est obligatoire' }));
-      return false;
-    }
-    if (value < 1) {
-      this.errors.update(e => ({ ...e, duration_months: 'La durée doit être d\'au moins 1 mois' }));
-      return false;
-    }
-    this.errors.update(e => ({ ...e, duration_months: '' }));
-    return true;
-  }
-
-  validateForm(): boolean {
-    return this.validateName() && 
-           this.validateAbbreviation() && 
-           this.validateTuitionFees() && 
-           this.validateDuration();
-  }
-
-  // === MODAL PRINCIPAL ===
   openCreateModal() {
     this.isEditing.set(false);
     this.selectedFormation.set(null);
-    this.errors.set({ name: '', abbreviation: '', tuition_fees: '', duration_months: '' });
-    this.formData.set({
-      name: '',
-      abbreviation: '',
-      tuition_fees: 0,
-      duration_months: 0,
-      is_active: true
-    });
+    this.errors.set({});
+    this.formData.set({ name: '', abbreviation: '', tuition_fees: 0, duration_months: 0, is_active: true });
     this.showModal.set(true);
   }
 
-  openEditModal(formation: Formation) {
+  openEditModal(f: Formation) {
     this.isEditing.set(true);
-    this.selectedFormation.set(formation);
-    this.errors.set({ name: '', abbreviation: '', tuition_fees: '', duration_months: '' });
-    this.formData.set({
-      name: formation.name,
-      abbreviation: formation.abbreviation,
-      tuition_fees: formation.tuition_fees,
-      duration_months: formation.duration_months,
-      is_active: formation.is_active
-    });
+    this.selectedFormation.set(f);
+    this.errors.set({});
+    this.formData.set({ name: f.name, abbreviation: f.abbreviation, tuition_fees: f.tuition_fees, duration_months: f.duration_months, is_active: f.is_active });
     this.showModal.set(true);
   }
 
-  closeModal() {
-    this.showModal.set(false);
-    this.errors.set({ name: '', abbreviation: '', tuition_fees: '', duration_months: '' });
-  }
+  closeModal() { this.showModal.set(false); this.errors.set({}); }
 
   onSubmit() {
-    if (!this.validateForm()) {
-      this.toastr.warning('Veuillez corriger les erreurs du formulaire');
-      return;
-    }
-
-    const data = this.formData();
+    if (!this.validate()) return;
     this.submitting.set(true);
 
-    if (this.isEditing() && this.selectedFormation()) {
-      this.formationService.update(this.selectedFormation()!.id, data).subscribe({
-        next: () => {
-          this.toastr.success('Formation modifiée avec succès');
-          this.closeModal();
-          this.formationService.refresh();
-          this.submitting.set(false);
-        },
-        error: (err) => {
-          this.toastr.error(err.error?.message || 'Erreur lors de la modification');
-          this.submitting.set(false);
+    const obs = this.isEditing()
+      ? this.formationService.update(this.selectedFormation()!.id, this.formData())
+      : this.formationService.create(this.formData());
+
+    obs.subscribe({
+      next: () => { this.toastr.success(this.isEditing() ? 'Formation modifiée' : 'Formation créée'); this.closeModal(); this.loadFormations(); this.submitting.set(false); },
+      error: (err: any) => {
+        if (err.status === 422 && err.error?.errors) {
+          const e: FormErrors = {};
+          for (const [key, msg] of Object.entries(err.error.errors)) {
+            if (['name', 'abbreviation', 'tuition_fees', 'duration_months'].includes(key)) {
+              e[key as keyof FormErrors] = Array.isArray(msg) ? msg[0] : msg as string;
+            }
+          }
+          this.errors.set(e);
+        } else {
+          this.toastr.error(err.error?.message || 'Erreur');
         }
-      });
-    } else {
-      this.formationService.create(data).subscribe({
-        next: () => {
-          this.toastr.success('Formation créée avec succès');
-          this.closeModal();
-          this.formationService.refresh();
-          this.submitting.set(false);
-        },
-        error: (err) => {
-          this.toastr.error(err.error?.message || 'Erreur lors de la création');
-          this.submitting.set(false);
-        }
-      });
-    }
-  }
-
-  // === MODAL DE CONFIRMATION SUPPRESSION ===
-  openDeleteModal(formation: Formation) {
-    this.formationToDelete.set(formation);
-    this.showDeleteModal.set(true);
-  }
-
-  closeDeleteModal() {
-    this.showDeleteModal.set(false);
-    this.formationToDelete.set(null);
-  }
-
-  confirmDelete() {
-    const formation = this.formationToDelete();
-    if (!formation) return;
-
-    this.submitting.set(true);
-    this.formationService.delete(formation.id).subscribe({
-      next: () => {
-        this.toastr.success('Formation supprimée avec succès');
-        this.closeDeleteModal();
-        this.formationService.refresh();
-        this.submitting.set(false);
-      },
-      error: (err) => {
-        this.toastr.error(err.error?.message || 'Erreur lors de la suppression');
         this.submitting.set(false);
       }
     });
   }
 
-  toggleStatus(formation: Formation) {
-    this.formationService.toggleStatus(formation.id).subscribe({
-      next: () => {
-        const status = !formation.is_active ? 'activée' : 'désactivée';
-        this.toastr.success(`Formation ${status} avec succès`);
-        this.formationService.refresh();
-      },
-      error: (err) => {
-        this.toastr.error(err.error?.message || 'Erreur lors du changement de statut');
-      }
+  openDeleteModal(f: Formation) { this.formationToDelete.set(f); this.showDeleteModal.set(true); }
+  closeDeleteModal() { this.showDeleteModal.set(false); this.formationToDelete.set(null); }
+
+  confirmDelete() {
+    const f = this.formationToDelete();
+    if (!f) return;
+    this.submitting.set(true);
+    this.formationService.delete(f.id).subscribe({
+      next: () => { this.toastr.success('Formation supprimée'); this.closeDeleteModal(); this.loadFormations(); this.submitting.set(false); },
+      error: () => this.submitting.set(false)
+    });
+  }
+
+  toggleStatus(f: Formation) {
+    this.togglingId.set(f.id);
+    this.formationService.toggleStatus(f.id).subscribe({
+      next: () => this.loadFormations(),
+      error: () => this.togglingId.set(null),
+      complete: () => this.togglingId.set(null)
     });
   }
 
   canManage(): boolean {
-    const user = this.currentUser;
-    return user && ['super_admin', 'admin_global'].includes(user.role);
+    return !!this.currentUser && ['super_admin', 'admin_global'].includes(this.currentUser.role);
   }
 
   formatPrice(price: number): string {

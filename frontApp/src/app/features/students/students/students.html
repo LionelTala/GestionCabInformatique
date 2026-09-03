@@ -1,0 +1,332 @@
+<div class="p-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 animate-fade-in-up" style="animation-delay: 0.1s;">
+    <div>
+      <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#15157D] text-3xl">school</span>
+        Gestion des Étudiants
+      </h1>
+      <p class="text-[#6B7280] text-sm mt-1">Consultez les dossiers de scolarité des étudiants</p>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4 mb-6">
+    <div class="flex flex-wrap items-end gap-4">
+      @if (canSeeAllCampuses()) {
+        <div class="flex-1 min-w-[150px]">
+          <label class="block text-xs font-medium text-[#6B7280] mb-1">Campus</label>
+          <select [(ngModel)]="filters().campus_id" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
+            <option [value]="null">Tous les campus</option>
+            @for (campus of campuses(); track campus.id) {
+              <option [value]="campus.id">{{ campus.name }}</option>
+            }
+          </select>
+        </div>
+      }
+      <div class="flex-1 min-w-[150px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Année scolaire</label>
+        <select [(ngModel)]="filters().academic_year_id" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
+          <option [value]="null">Toutes les années</option>
+          @for (year of academicYears(); track year.id) {
+            <option [value]="year.id">{{ year.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="flex-1 min-w-[150px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Formation</label>
+        <select [(ngModel)]="filters().formation_id" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
+          <option [value]="null">Toutes les formations</option>
+          @for (formation of formations(); track formation.id) {
+            <option [value]="formation.id">{{ formation.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Rechercher</label>
+        <input type="text" [(ngModel)]="filters().search" (keyup.enter)="applyFilters()" placeholder="Nom ou matricule..." class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none" />
+      </div>
+      <button (click)="applyFilters()" class="px-4 py-2 bg-[#15157D] text-white text-sm font-medium rounded-lg hover:bg-[#2E3192] transition-colors">Rechercher</button>
+      <button (click)="resetFilters()" class="px-4 py-2 text-sm text-[#6B7280] hover:text-[#15157D] hover:bg-[#E8F0FE] rounded-lg transition-colors">
+        <span class="material-symbols-outlined text-sm align-middle">refresh</span> Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <!-- Tableau -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+    @if (loading()) {
+      <div class="flex flex-col items-center justify-center py-20">
+        <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+        <p class="text-[#6B7280] mt-4 text-sm">Chargement des étudiants...</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-[#F5F7FA] border-b border-[#E5E7EB]">
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Matricule</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Étudiant</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Formation</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Campus</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Financier</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Statut</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#E5E7EB]">
+            @for (student of students(); track student.id; let i = $index) {
+              <tr class="hover:bg-[#F5F7FA] transition-colors animate-fade-in-up" [style.animation-delay]="(0.1 + (i * 0.03)) + 's'">
+                <td class="px-6 py-4">
+                  <span class="font-mono text-sm font-semibold text-[#15157D]">{{ student.registration_number || '-' }}</span>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-[#E8F0FE] flex items-center justify-center text-[#15157D] font-bold text-xs">
+                      {{ student.first_name?.[0] }}{{ student.last_name?.[0] }}
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-[#0B1C30]">{{ student.first_name }} {{ student.last_name }}</p>
+                      <p class="text-xs text-[#6B7280]">{{ student.email || '-' }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ student.latest_registration?.formation?.name || '-' }}</td>
+                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ student.latest_registration?.campus?.name || '-' }}</td>
+                <td class="px-6 py-4 text-right">
+                  <p class="text-sm font-semibold text-[#0B1C30]">{{ formatPrice(student.latest_registration?.amount_paid || 0) }}</p>
+                  <p class="text-xs text-[#6B7280]">Reste : {{ formatPrice(student.latest_registration?.balance || 0) }}</p>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ getPaymentStatusClass(student.latest_registration?.payment_status || 'unpaid') }}">
+                    {{ getPaymentStatusLabel(student.latest_registration?.payment_status || 'unpaid') }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <button (click)="viewStudent(student)" class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6B7280] hover:text-[#15157D] transition-colors" title="Voir le dossier complet">
+                    <span class="material-symbols-outlined text-xl">visibility</span>
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="text-center py-12 text-[#6B7280]">
+                  <span class="material-symbols-outlined text-5xl text-[#E5E7EB] block mb-3">school</span>
+                  <p>Aucun étudiant trouvé</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (meta().total > 0) {
+        <div class="flex items-center justify-between px-6 py-4 border-t border-[#E5E7EB]">
+          <div class="text-sm text-[#6B7280]">
+            Affichage de <span class="font-medium">{{ meta().from }}</span> à <span class="font-medium">{{ meta().to }}</span> sur <span class="font-medium">{{ meta().total }}</span> étudiants
+          </div>
+          <div class="flex items-center gap-1">
+            <button (click)="goToPage(meta().current_page - 1)" [disabled]="meta().current_page === 1" class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-sm">chevron_left</span>
+            </button>
+            @for (page of getPages(); track $index) {
+              @if (page === -1) { <span class="px-2 text-[#6B7280]">…</span> }
+              @else {
+                <button (click)="goToPage(page)" [class.bg-[#15157D]]="page === meta().current_page" [class.text-white]="page === meta().current_page" [class.text-[#6B7280]]="page !== meta().current_page" [class.font-medium]="page === meta().current_page" class="w-8 h-8 rounded-lg hover:bg-[#F5F7FA] transition-colors text-sm">
+                  {{ page }}
+                </button>
+              }
+            }
+            <button (click)="goToPage(meta().current_page + 1)" [disabled]="meta().current_page === meta().last_page" class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-sm">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL DÉTAILS ÉTUDIANT -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showDetailModal() && selectedStudent()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeDetailModal()">
+      <div class="bg-white rounded-2xl w-full max-w-4xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up" (click)="$event.stopPropagation()">
+        
+        @if (loadingDetails()) {
+          <div class="flex flex-col items-center justify-center py-20">
+            <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+            <p class="text-[#6B7280] mt-4 text-sm">Chargement du dossier...</p>
+          </div>
+        } @else if (studentDetails()) {
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+                <span class="material-symbols-outlined text-3xl">person</span>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-[#0B1C30]">Dossier de {{ studentDetails().student.first_name }} {{ studentDetails().student.last_name }}</h2>
+                <p class="text-sm text-[#6B7280]">Matricule : {{ studentDetails().student.registration_number }}</p>
+              </div>
+            </div>
+            <button type="button" (click)="closeDetailModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <!-- Résumé financier -->
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-green-50 border border-green-200 rounded-xl p-4">
+              <p class="text-xs text-green-700 font-medium mb-1">Total versé</p>
+              <p class="text-2xl font-bold text-green-800">{{ formatPrice(studentDetails().financial_summary.total_paid) }}</p>
+            </div>
+            <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+              <p class="text-xs text-red-700 font-medium mb-1">Reste à payer</p>
+              <p class="text-2xl font-bold text-red-800">{{ formatPrice(studentDetails().financial_summary.total_balance) }}</p>
+            </div>
+          </div>
+
+          <!-- Informations personnelles -->
+          <div class="bg-[#F5F7FA] rounded-xl p-4 mb-6">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="text-sm font-semibold text-[#0B1C30]">Informations personnelles</h3>
+              @if (canEdit()) {
+                <button (click)="openEditModal()" class="text-xs text-[#15157D] hover:underline flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">edit</span> Modifier
+                </button>
+              }
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+              <div><span class="text-[#6B7280]">Email :</span> <span class="font-medium text-[#0B1C30]">{{ studentDetails().student.email || '-' }}</span></div>
+              <div><span class="text-[#6B7280]">Téléphone :</span> <span class="font-medium text-[#0B1C30]">{{ studentDetails().student.phone || '-' }}</span></div>
+              <div><span class="text-[#6B7280]">Date de naissance :</span> <span class="font-medium text-[#0B1C30]">{{ formatDate(studentDetails().student.date_of_birth) }}</span></div>
+              <div><span class="text-[#6B7280]">Adresse :</span> <span class="font-medium text-[#0B1C30]">{{ studentDetails().student.address || '-' }}</span></div>
+              <div><span class="text-[#6B7280]">Parent :</span> <span class="font-medium text-[#0B1C30]">{{ studentDetails().student.parent_name || '-' }}</span></div>
+              <div><span class="text-[#6B7280]">Tél. parent :</span> <span class="font-medium text-[#0B1C30]">{{ studentDetails().student.parent_phone || '-' }}</span></div>
+            </div>
+          </div>
+
+          <!-- Historique des inscriptions et paiements -->
+          <div class="space-y-4">
+            <h3 class="text-sm font-semibold text-[#0B1C30]">Historique des inscriptions et paiements</h3>
+            @for (reg of studentDetails().registrations; track reg.id) {
+              <div class="border border-[#E5E7EB] rounded-xl p-4">
+                <div class="flex justify-between items-start mb-3">
+                  <div>
+                    <p class="font-semibold text-[#0B1C30]">{{ reg.formation.name }}</p>
+                    <p class="text-xs text-[#6B7280]">{{ reg.campus.name }} • {{ reg.academic_year.label }} • Inscrit le {{ formatDate(reg.created_at) }}</p>
+                  </div>
+                  <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ getPaymentStatusClass(reg.payment_status) }}">
+                    {{ getPaymentStatusLabel(reg.payment_status) }}
+                  </span>
+                </div>
+                <div class="grid grid-cols-3 gap-3 text-sm mb-3">
+                  <div><span class="text-[#6B7280]">Versement initial :</span> <span class="font-medium">{{ formatPrice(reg.initial_payment) }}</span></div>
+                  <div><span class="text-[#6B7280]">Total versé :</span> <span class="font-medium text-green-700">{{ formatPrice(reg.amount_paid) }}</span></div>
+                  <div><span class="text-[#6B7280]">Reste :</span> <span class="font-medium text-red-700">{{ formatPrice(reg.balance) }}</span></div>
+                </div>
+                @if (reg.payments.length > 0) {
+                  <div class="border-t border-[#E5E7EB] pt-3">
+                    <p class="text-xs font-medium text-[#6B7280] mb-2">Historique des paiements</p>
+                    <div class="space-y-1">
+                      @for (payment of reg.payments; track payment.id) {
+                        <div class="flex justify-between text-xs bg-white p-2 rounded border border-[#E5E7EB]">
+                          <span class="text-[#6B7280]">{{ formatDate(payment.payment_date) }} • {{ payment.reference }}</span>
+                          <span class="font-semibold text-green-700">{{ formatPrice(payment.amount) }}</span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            } @empty {
+              <p class="text-sm text-[#6B7280] text-center py-4">Aucune inscription trouvée</p>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL ÉDITION INFOS PERSONNELLES -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showEditModal() && editFormData()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-fade-in" (click)="closeEditModal()">
+      <div class="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up" (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+              <span class="material-symbols-outlined text-2xl">edit</span>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-[#0B1C30]">Modifier les informations</h2>
+              <p class="text-sm text-[#6B7280]">Modifiez les informations personnelles de l'étudiant</p>
+            </div>
+          </div>
+          <button type="button" (click)="closeEditModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <form (ngSubmit)="onSubmitEdit()">
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Prénom <span class="text-[#BB0013]">*</span></label>
+                <input type="text" [(ngModel)]="editFormData().first_name" name="first_name" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-[#BB0013]]="editErrors().first_name" [class.border-[#E5E7EB]]="!editErrors().first_name" />
+                @if (editErrors().first_name) { <p class="text-sm text-[#BB0013] mt-1">{{ editErrors().first_name }}</p> }
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Nom <span class="text-[#BB0013]">*</span></label>
+                <input type="text" [(ngModel)]="editFormData().last_name" name="last_name" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-[#BB0013]]="editErrors().last_name" [class.border-[#E5E7EB]]="!editErrors().last_name" />
+                @if (editErrors().last_name) { <p class="text-sm text-[#BB0013] mt-1">{{ editErrors().last_name }}</p> }
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Email</label>
+                <input type="email" [(ngModel)]="editFormData().email" name="email" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-[#BB0013]]="editErrors().email" [class.border-[#E5E7EB]]="!editErrors().email" />
+                @if (editErrors().email) { <p class="text-sm text-[#BB0013] mt-1">{{ editErrors().email }}</p> }
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Téléphone</label>
+                <input type="text" [(ngModel)]="editFormData().phone" name="phone" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Date de naissance</label>
+              <input type="date" [(ngModel)]="editFormData().date_of_birth" name="date_of_birth" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Adresse</label>
+              <textarea [(ngModel)]="editFormData().address" name="address" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all resize-none" rows="2"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Nom du parent</label>
+                <input type="text" [(ngModel)]="editFormData().parent_name" name="parent_name" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Téléphone du parent</label>
+                <input type="text" [(ngModel)]="editFormData().parent_phone" name="parent_phone" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" />
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3 justify-end mt-6 pt-4 border-t border-[#E5E7EB]">
+            <button type="button" (click)="closeEditModal()" class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">Annuler</button>
+            <button type="submit" [disabled]="submitting()" class="px-5 py-2.5 bg-[#15157D] text-white text-sm font-medium rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              @if (submitting()) {
+                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Enregistrement...
+              } @else {
+                <span class="material-symbols-outlined text-sm">save</span> Enregistrer
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>
