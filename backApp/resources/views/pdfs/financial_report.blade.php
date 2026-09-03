@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Rapport Financier</title>
+    <title>Rapport Financier - CAB Informatique</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -10,35 +10,65 @@
             font-size: 10px;
             line-height: 1.4;
             color: #333;
-            /* Forcer les marges de gauche et de droite directement ici */
-            padding: 20px 25px; 
+            padding: 20px 25px;
         }
         
+        /* ═══ EN-TÊTE AVEC LOGO ═══ */
         .header {
-            text-align: center;
             margin-bottom: 20px;
             border-bottom: 3px solid #15157D;
             padding-bottom: 15px;
         }
-        .header h1 {
-            font-size: 20px;
+        .header-top {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        .header-top td {
+            vertical-align: middle;
+        }
+        .logo-cell {
+            width: 80px;
+        }
+        .logo {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 2px solid #15157D;
+            object-fit: cover;
+        }
+        .company-info {
+            text-align: center;
+        }
+        .company-name {
+            font-size: 22px;
+            font-weight: bold;
             color: #15157D;
-            margin-bottom: 5px;
+            letter-spacing: 1px;
+            margin-bottom: 3px;
         }
-        .header .subtitle {
-            font-size: 12px;
+        .report-title {
+            font-size: 14px;
             color: #6B7280;
+            font-weight: 500;
         }
-        .header .filter-info {
+        .filter-info {
+            text-align: center;
             font-size: 11px;
             color: #0B1C30;
             margin-top: 8px;
             font-weight: bold;
+            background: #F5F7FA;
+            padding: 6px 12px;
+            border-radius: 4px;
+            display: inline-block;
         }
         
+        /* ═══ SECTIONS CAMPUS ═══ */
         .campus-section {
             margin-bottom: 25px;
             page-break-inside: avoid;
+            break-inside: avoid;
         }
         .campus-header {
             background: #E8F0FE;
@@ -51,6 +81,7 @@
             color: #15157D;
         }
         
+        /* ═══ TABLEAUX ═══ */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -79,6 +110,7 @@
         .income { color: #10B981; font-weight: 600; }
         .expense { color: #EF4444; font-weight: 600; }
         
+        /* ═══ RÉSUMÉ PAR CAMPUS ═══ */
         .campus-summary {
             background: #F9FAFB;
             padding: 10px;
@@ -97,12 +129,16 @@
             color: #6B7280;
         }
         
+        /* ═══ RÉSUMÉ GLOBAL ═══ */
         .global-summary {
             background: #15157D;
             color: white;
             padding: 15px;
             border-radius: 8px;
             margin-top: 20px;
+            /* Empêche le bloc d'être coupé : s'il manque de place, il bascule entier sur la page suivante */
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
         .global-summary h3 {
             font-size: 14px;
@@ -125,6 +161,7 @@
             font-weight: bold;
         }
         
+        /* ═══ PIED DE PAGE ═══ */
         .footer {
             margin-top: 30px;
             padding-top: 15px;
@@ -132,10 +169,12 @@
             text-align: center;
             font-size: 8px;
             color: #9CA3AF;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
         
         @page {
-            margin: 0px; /* On enlève les marges par défaut du conteneur de la page */
+            margin: 0px;
             size: A4 portrait;
         }
 
@@ -151,12 +190,32 @@
 </head>
 <body>
 
+    <!-- ═══ EN-TÊTE AVEC LOGO ═══ -->
     <div class="header">
-        <h1>RAPPORT FINANCIER</h1>
-        <div class="subtitle">Bilan comptable des mouvements financiers</div>
-        <div class="filter-info">{{ $filterInfo }}</div>
+        <table class="header-top">
+            <tr>
+                <td class="logo-cell">
+                    @if($logoBase64)
+                        <img src="{{ $logoBase64 }}" class="logo" alt="Logo CAB Informatique">
+                    @else
+                        <div class="logo" style="background: linear-gradient(135deg, #15157D, #6C3CE1); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold;">
+                            CAB
+                        </div>
+                    @endif
+                </td>
+                <td class="company-info">
+                    <div class="company-name">CAB INFORMATIQUE</div>
+                    <div class="report-title">RAPPORT FINANCIER</div>
+                </td>
+                <td class="logo-cell"></td>
+            </tr>
+        </table>
+        <div class="text-center">
+            <div class="filter-info">{{ $filterInfo }}</div>
+        </div>
     </div>
 
+    <!-- ═══ SECTIONS PAR CAMPUS ═══ -->
     @foreach($groupedByCampus as $campusData)
         <div class="campus-section">
             <div class="campus-header">
@@ -223,6 +282,7 @@
         </div>
     @endforeach
 
+    <!-- ═══ RÉSUMÉ GLOBAL ═══ -->
     <div class="global-summary">
         <h3>SOLDE GLOBAL</h3>
         <table>
@@ -243,6 +303,7 @@
         </table>
     </div>
 
+    <!-- ═══ PIED DE PAGE ═══ -->
     <div class="footer">
         <p>Rapport généré le {{ $generatedAt->format('d/m/Y à H:i') }} par {{ $generatedBy }}</p>
         <p>CAB Informatique - Système de Gestion Financière</p>

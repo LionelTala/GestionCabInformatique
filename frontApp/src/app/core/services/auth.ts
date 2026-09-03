@@ -1,4 +1,3 @@
-// core/services/auth.ts
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -17,12 +16,14 @@ export class Auth {
   readonly isAuthenticated = this.authenticated.asReadonly();
 
   constructor(private http: HttpClient, private router: Router) {
-    // ⚡ Restaurer le cache au démarrage
     const cached = localStorage.getItem('user');
     if (cached) {
-      const parsed = JSON.parse(cached);
-      this.user.set(parsed);
-      this.authenticated.set(true);
+      try {
+        this.user.set(JSON.parse(cached));
+        this.authenticated.set(true);
+      } catch (e) {
+        this.clean(); // Sécurité au cas où le JSON est corrompu
+      }
     }
   }
 
@@ -49,7 +50,7 @@ export class Auth {
     return this.http.post(`${this.apiUrl}/auth/logout`, {}, { withCredentials: true }).pipe(
       tap({
         next: () => this.clean(),
-        error: () => this.clean()
+        error: () => this.clean() // Force la déconnexion même si le backend échoue
       })
     );
   }
@@ -64,7 +65,8 @@ export class Auth {
     localStorage.setItem('user', JSON.stringify(data));
   }
 
-  private clean() {
+  // ✅ Cette méthode est appelée par l'intercepteur en cas de 401/419
+  clean() {
     this.user.set(null);
     this.authenticated.set(false);
     localStorage.removeItem('user');

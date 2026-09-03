@@ -49,7 +49,7 @@ export class StudentService {
     return this.http.get<any>(`${this.apiUrl}/students/${id}`);
   }
 
-  updateStudent(id: number, data: any) {
-    return this.http.put<any>(`${this.apiUrl}/students/${id}`, data);
+   updateStudent(id: number, data: FormData) {
+    return this.http.post<any>(`${this.apiUrl}/students/${id}`, data);
   }
 }

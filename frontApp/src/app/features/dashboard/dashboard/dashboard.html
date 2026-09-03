@@ -1,4 +1,317 @@
-<div class="text-center py-20">
-  <h2 class="text-2xl font-bold text-[#0B1C30]">Dashboard</h2>
-  <p class="text-[#6B7280] mt-2">Page en construction</p>
+<div class="p-6 space-y-6">
+  
+  <!-- En-tête -->
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 animate-fade-in-up">
+    <div>
+      <h1 class="text-3xl font-bold text-[#0B1C30]">Tableau de Bord</h1>
+      <p class="text-[#6B7280] text-sm mt-1">
+        Bienvenue, <span class="font-semibold text-[#15157D]">{{ currentUser?.first_name }}</span> • {{ getRoleTitle() }}
+      </p>
+    </div>
+    <div class="text-sm text-[#6B7280] bg-white px-4 py-2 rounded-xl border border-[#E5E7EB] shadow-sm flex items-center gap-2">
+      <span class="material-symbols-outlined text-[#15157D] text-base">calendar_today</span>
+      {{ getCurrentMonth() }}
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="flex items-center justify-center py-20">
+      <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+    </div>
+  } @else if (stats()) {
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- CARTES DE STATISTIQUES -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      
+      <!-- Total Étudiants -->
+      <div class="relative overflow-hidden bg-gradient-to-br from-[#15157D] to-[#2E3192] p-5 rounded-2xl shadow-lg text-white">
+        <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full"></div>
+        <div class="absolute -right-2 -bottom-6 w-16 h-16 bg-white/5 rounded-full"></div>
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3">
+            <span class="material-symbols-outlined text-3xl opacity-80">school</span>
+            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">Total</span>
+          </div>
+          <p class="text-3xl font-bold">{{ stats().total_students }}</p>
+          <p class="text-sm opacity-80 mt-1">Étudiants inscrits</p>
+        </div>
+      </div>
+
+      <!-- Nouvelles Inscriptions -->
+      <div class="relative overflow-hidden bg-gradient-to-br from-[#10B981] to-[#059669] p-5 rounded-2xl shadow-lg text-white">
+        <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full"></div>
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3">
+            <span class="material-symbols-outlined text-3xl opacity-80">person_add</span>
+            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">Ce mois</span>
+          </div>
+          <p class="text-3xl font-bold">{{ stats().new_registrations }}</p>
+          <p class="text-sm opacity-80 mt-1">Nouvelles inscriptions</p>
+        </div>
+      </div>
+
+      <!-- Entrées -->
+      <div class="relative overflow-hidden bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8] p-5 rounded-2xl shadow-lg text-white">
+        <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full"></div>
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3">
+            <span class="material-symbols-outlined text-3xl opacity-80">trending_up</span>
+            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">Ce mois</span>
+          </div>
+          <p class="text-2xl font-bold">{{ formatPriceShort(stats().monthly_income) }}</p>
+          <p class="text-sm opacity-80 mt-1">Total des entrées</p>
+        </div>
+      </div>
+
+      <!-- Sorties -->
+      <div class="relative overflow-hidden bg-gradient-to-br from-[#EF4444] to-[#DC2626] p-5 rounded-2xl shadow-lg text-white">
+        <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full"></div>
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-3">
+            <span class="material-symbols-outlined text-3xl opacity-80">trending_down</span>
+            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">Ce mois</span>
+          </div>
+          <p class="text-2xl font-bold">{{ formatPriceShort(stats().monthly_expense) }}</p>
+          <p class="text-sm opacity-80 mt-1">Total des sorties</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SOLDE NET (Bandeau) -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+          <span class="material-symbols-outlined text-xl">account_balance</span>
+        </div>
+        <span class="font-semibold text-[#0B1C30]">Solde net du mois</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <div class="text-center">
+          <p class="text-xs text-[#6B7280]">Entrées</p>
+          <p class="font-bold text-green-600">{{ formatPrice(stats().monthly_income) }}</p>
+        </div>
+        <span class="material-symbols-outlined text-[#6B7280]">remove</span>
+        <div class="text-center">
+          <p class="text-xs text-[#6B7280]">Sorties</p>
+          <p class="font-bold text-red-600">{{ formatPrice(stats().monthly_expense) }}</p>
+        </div>
+        <span class="material-symbols-outlined text-[#6B7280]">equal</span>
+        <div class="text-center">
+          <p class="text-xs text-[#6B7280]">Solde</p>
+          <p class="text-xl font-bold" [class.text-green-600]="(stats().monthly_income - stats().monthly_expense) >= 0" [class.text-red-600]="(stats().monthly_income - stats().monthly_expense) < 0">
+            {{ formatPrice(stats().monthly_income - stats().monthly_expense) }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- ACTIVITÉS RÉCENTES -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- Derniers Paiements -->
+      <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+        <div class="p-4 border-b border-[#E5E7EB] flex justify-between items-center bg-gradient-to-r from-green-50 to-white">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-green-600">payments</span>
+            <h3 class="font-semibold text-[#0B1C30]">Derniers Paiements</h3>
+          </div>
+          <a routerLink="/payments" class="text-xs text-[#15157D] hover:underline font-medium flex items-center gap-1">
+            Voir tout <span class="material-symbols-outlined text-sm">arrow_forward</span>
+          </a>
+        </div>
+        <div class="divide-y divide-[#E5E7EB]">
+          @for (payment of stats().recent_payments; track payment.id) {
+            <div class="p-4 hover:bg-[#F9FAFB] transition-colors flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-green-700">
+                  <span class="material-symbols-outlined text-lg">arrow_downward</span>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-[#0B1C30]">{{ payment.description }}</p>
+                  <p class="text-xs text-[#6B7280]">{{ payment.reference }} • {{ formatDate(payment.created_at) }}</p>
+                </div>
+              </div>
+              <span class="text-sm font-bold text-green-600">+{{ formatPrice(payment.amount) }}</span>
+            </div>
+          } @empty {
+            <div class="p-8 text-center text-[#6B7280] text-sm">
+              <span class="material-symbols-outlined text-4xl text-[#E5E7EB] block mb-2">payments</span>
+              Aucun paiement récent
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Dernières Dépenses -->
+      <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+        <div class="p-4 border-b border-[#E5E7EB] flex justify-between items-center bg-gradient-to-r from-red-50 to-white">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-red-600">receipt_long</span>
+            <h3 class="font-semibold text-[#0B1C30]">Dernières Dépenses</h3>
+          </div>
+          <a routerLink="/expenses" class="text-xs text-[#15157D] hover:underline font-medium flex items-center gap-1">
+            Voir tout <span class="material-symbols-outlined text-sm">arrow_forward</span>
+          </a>
+        </div>
+        <div class="divide-y divide-[#E5E7EB]">
+          @for (expense of stats().recent_expenses; track expense.id) {
+            <div class="p-4 hover:bg-[#F9FAFB] transition-colors flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center text-red-700">
+                  <span class="material-symbols-outlined text-lg">arrow_upward</span>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-[#0B1C30]">{{ expense.description }}</p>
+                  <p class="text-xs text-[#6B7280]">
+                    {{ expense.reference }} • {{ expense.campus }}
+                    @if (!isSuperAdmin()) { • Par {{ expense.created_by }} }
+                  </p>
+                </div>
+              </div>
+              <span class="text-sm font-bold text-red-600">-{{ formatPrice(expense.amount) }}</span>
+            </div>
+          } @empty {
+            <div class="p-8 text-center text-[#6B7280] text-sm">
+              <span class="material-symbols-outlined text-4xl text-[#E5E7EB] block mb-2">receipt_long</span>
+              Aucune dépense récente
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION INFÉRIEURE -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Dernières Inscriptions (2/3) -->
+      <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+        <div class="p-4 border-b border-[#E5E7EB] flex justify-between items-center bg-gradient-to-r from-blue-50 to-white">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[#15157D]">person_add</span>
+            <h3 class="font-semibold text-[#0B1C30]">Dernières Inscriptions</h3>
+          </div>
+          <a routerLink="/registrations" class="text-xs text-[#15157D] hover:underline font-medium flex items-center gap-1">
+            Voir tout <span class="material-symbols-outlined text-sm">arrow_forward</span>
+          </a>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-[#F5F7FA] text-[#6B7280]">
+              <tr>
+                <th class="text-left px-4 py-3 font-medium">Étudiant</th>
+                <th class="text-left px-4 py-3 font-medium hidden sm:table-cell">Formation</th>
+                <th class="text-left px-4 py-3 font-medium hidden md:table-cell">Campus</th>
+                <th class="text-right px-4 py-3 font-medium">Versement</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#E5E7EB]">
+              @for (act of stats().recent_activities; track act.id) {
+                <tr class="hover:bg-[#F9FAFB] transition-colors">
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-2">
+                      <div class="w-7 h-7 rounded-full bg-[#E8F0FE] flex items-center justify-center text-[#15157D] font-bold text-[10px]">
+{{ getInitials(act.student_name) }}                      </div>
+                      <div>
+                        <p class="font-medium text-[#0B1C30]">{{ act.student_name }}</p>
+                        <p class="text-[10px] text-[#6B7280]">{{ act.matricule }}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-[#6B7280] hidden sm:table-cell">{{ act.formation }}</td>
+                  <td class="px-4 py-3 text-[#6B7280] hidden md:table-cell">{{ act.campus }}</td>
+                  <td class="px-4 py-3 text-right font-semibold text-green-700">{{ formatPrice(act.amount_paid) }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="text-center py-8 text-[#6B7280]">Aucune inscription récente</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Colonne Droite : Selon le rôle -->
+      @if (isSuperAdmin()) {
+        <!-- SUPER ADMIN / GLOBAL : Répartition par Campus -->
+        <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+          <div class="p-4 border-b border-[#E5E7EB] bg-gradient-to-r from-purple-50 to-white">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-purple-600">apartment</span>
+              <h3 class="font-semibold text-[#0B1C30]">Vue par Campus</h3>
+            </div>
+          </div>
+          <div class="p-4 space-y-3">
+            @for (campus of stats().campus_breakdown; track campus.id) {
+              <div class="p-3 bg-[#F5F7FA] rounded-xl hover:bg-[#E8F0FE] transition-colors">
+                <div class="flex justify-between items-start mb-2">
+                  <div>
+                    <p class="font-semibold text-[#0B1C30] text-sm">{{ campus.name }}</p>
+                    <p class="text-[10px] text-[#6B7280]">📍 {{ campus.city }}</p>
+                  </div>
+                  <span class="bg-[#15157D] text-white text-xs font-bold px-2 py-1 rounded-full">{{ campus.student_count }}</span>
+                </div>
+                <div class="flex justify-between text-xs mt-2 pt-2 border-t border-[#E5E7EB]">
+                  <span class="text-green-700 font-medium">↑ {{ formatPriceShort(campus.monthly_income) }}</span>
+                  <span class="text-red-700 font-medium">↓ {{ formatPriceShort(campus.monthly_expense) }}</span>
+                  <span class="font-bold" [class.text-green-700]="campus.balance >= 0" [class.text-red-700]="campus.balance < 0">
+                    {{ formatPriceShort(campus.balance) }}
+                  </span>
+                </div>
+              </div>
+            } @empty {
+              <p class="text-center text-sm text-[#6B7280] py-4">Aucun campus configuré</p>
+            }
+          </div>
+        </div>
+      } @else {
+        <!-- ADMIN CAMPUS / SECRÉTAIRE : Résumé rapide -->
+        <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+          <div class="p-4 border-b border-[#E5E7EB] bg-gradient-to-r from-orange-50 to-white">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-orange-600">insights</span>
+              <h3 class="font-semibold text-[#0B1C30]">Résumé Rapide</h3>
+            </div>
+          </div>
+          <div class="p-6 space-y-5">
+            <div class="flex items-center gap-3 p-3 bg-green-50 rounded-xl">
+              <span class="material-symbols-outlined text-green-600">trending_up</span>
+              <div class="flex-1">
+                <p class="text-xs text-green-700">Entrées du mois</p>
+                <p class="font-bold text-green-800">{{ formatPrice(stats().monthly_income) }}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 bg-red-50 rounded-xl">
+              <span class="material-symbols-outlined text-red-600">trending_down</span>
+              <div class="flex-1">
+                <p class="text-xs text-red-700">Sorties du mois</p>
+                <p class="font-bold text-red-800">{{ formatPrice(stats().monthly_expense) }}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
+              <span class="material-symbols-outlined text-blue-600">school</span>
+              <div class="flex-1">
+                <p class="text-xs text-blue-700">Étudiants actifs</p>
+                <p class="font-bold text-blue-800">{{ stats().total_students }}</p>
+              </div>
+            </div>
+            <div class="pt-3 border-t border-[#E5E7EB] text-center">
+              <p class="text-xs text-[#6B7280] mb-1">Solde net</p>
+              <p class="text-2xl font-bold" [class.text-green-700]="(stats().monthly_income - stats().monthly_expense) >= 0" [class.text-red-700]="(stats().monthly_income - stats().monthly_expense) < 0">
+                {{ formatPrice(stats().monthly_income - stats().monthly_expense) }}
+              </p>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
 </div>

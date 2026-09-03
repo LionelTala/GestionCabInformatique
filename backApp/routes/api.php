@@ -54,6 +54,7 @@ Route::prefix('v1')->group(function () {
 
     // === PUBLIC ===
     Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::get('/dashboard/stats', [App\Http\Controllers\Api\DashboardController::class, 'getStats']);
 
     // === PROTÉGÉES ===
     Route::middleware('auth:sanctum')->group(function () {
@@ -141,6 +142,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/students', [StudentController::class, 'index']);
         Route::get('/students/{id}', [StudentController::class, 'show']);
         Route::put('/students/{id}', [StudentController::class, 'update']);
+        Route::get('/students/{id}/photo', [StudentController::class, 'getPhoto']);
 
                 // ═══ DÉPENSES ═══
         Route::get('/expenses', [ExpenseController::class, 'index']);

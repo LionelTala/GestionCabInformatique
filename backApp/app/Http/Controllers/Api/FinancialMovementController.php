@@ -114,7 +114,7 @@ class FinancialMovementController extends Controller
     /**
      * Générer le rapport PDF
      */
-    public function generateReport(Request $request)
+        public function generateReport(Request $request)
     {
         $user = $request->user();
 
@@ -126,12 +126,10 @@ class FinancialMovementController extends Controller
             ->orderBy('campus_id')
             ->orderBy('created_at', 'asc');
 
-        // Restriction pour admin_campus
         if ($user->role === 'admin_campus') {
             $query->where('campus_id', $user->campus_id);
         }
 
-        // Appliquer les filtres
         if ($request->filled('campus_id') && $user->role !== 'admin_campus') {
             $campusId = filter_var($request->campus_id, FILTER_VALIDATE_INT);
             if ($campusId !== false) {
@@ -155,12 +153,10 @@ class FinancialMovementController extends Controller
 
         $movements = $query->get();
 
-        // Calculer les totaux
         $totalIncome = $movements->where('type', 'income')->sum('amount');
         $totalExpense = $movements->where('type', 'expense')->sum('amount');
         $balance = $totalIncome - $totalExpense;
 
-        // Grouper par campus
         $groupedByCampus = $movements->groupBy('campus_id')->map(function ($items) {
             return [
                 'campus' => $items->first()->campus,
@@ -171,8 +167,15 @@ class FinancialMovementController extends Controller
             ];
         });
 
-        // Préparer les infos de filtre pour le titre du PDF
         $filterInfo = $this->buildFilterInfo($request, $user);
+
+        // ✅ Charger le logo en base64 pour DomPDF
+        $logoBase64 = null;
+        $logoPath = public_path('logo.jpg');
+        if (file_exists($logoPath)) {
+            $imageData = base64_encode(file_get_contents($logoPath));
+            $logoBase64 = 'data:image/jpeg;base64,' . $imageData;
+        }
 
         $pdf = Pdf::loadView('pdfs.financial_report', [
             'groupedByCampus' => $groupedByCampus,
@@ -182,13 +185,13 @@ class FinancialMovementController extends Controller
             'filterInfo' => $filterInfo,
             'generatedAt' => now(),
             'generatedBy' => $user->first_name . ' ' . $user->last_name,
+            'logoBase64' => $logoBase64, // ✅ Passer le logo à la vue
         ]);
 
         $filename = 'rapport-financier-' . now()->format('Y-m-d-His') . '.pdf';
 
         return $pdf->download($filename);
     }
-
     /**
      * Construire les informations de filtre pour le titre du rapport
      */

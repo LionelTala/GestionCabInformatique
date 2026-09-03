@@ -17,7 +17,7 @@
         <div class="flex-1 min-w-[150px]">
           <label class="block text-xs font-medium text-[#6B7280] mb-1">Campus</label>
           <select [(ngModel)]="filters().campus_id" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
-            <option [value]="null">Tous les campus</option>
+            <option [ngValue]="null">Tous les campus</option>
             @for (campus of campuses(); track campus.id) {
               <option [value]="campus.id">{{ campus.name }}</option>
             }
@@ -27,7 +27,7 @@
       <div class="flex-1 min-w-[150px]">
         <label class="block text-xs font-medium text-[#6B7280] mb-1">Année scolaire</label>
         <select [(ngModel)]="filters().academic_year_id" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
-          <option [value]="null">Toutes les années</option>
+          <option [ngValue]="null">Toutes les années</option>
           @for (year of academicYears(); track year.id) {
             <option [value]="year.id">{{ year.label }}</option>
           }
@@ -36,7 +36,7 @@
       <div class="flex-1 min-w-[150px]">
         <label class="block text-xs font-medium text-[#6B7280] mb-1">Formation</label>
         <select [(ngModel)]="filters().formation_id" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
-          <option [value]="null">Toutes les formations</option>
+          <option [ngValue]="null">Toutes les formations</option>
           @for (formation of formations(); track formation.id) {
             <option [value]="formation.id">{{ formation.name }}</option>
           }
@@ -160,16 +160,25 @@
             <p class="text-[#6B7280] mt-4 text-sm">Chargement du dossier...</p>
           </div>
         } @else if (studentDetails()) {
-          <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
-                <span class="material-symbols-outlined text-3xl">person</span>
-              </div>
-              <div>
-                <h2 class="text-2xl font-bold text-[#0B1C30]">Dossier de {{ studentDetails().student.first_name }} {{ studentDetails().student.last_name }}</h2>
-                <p class="text-sm text-[#6B7280]">Matricule : {{ studentDetails().student.registration_number }}</p>
-              </div>
+          <!-- ✅ PHOTO DE PROFIL EN HAUT -->
+          <div class="flex flex-col items-center mb-6">
+            <div class="w-32 h-32 rounded-full overflow-hidden border-4 border-[#E8F0FE] shadow-lg mb-3 bg-gray-100">
+              @if (studentDetails().student.photo) {
+                <img [src]="getPhotoUrl(studentDetails().student.id)" 
+                     class="w-full h-full object-cover" 
+                     alt="Photo étudiant">
+              } @else {
+                <div class="w-full h-full flex items-center justify-center text-[#6B7280] bg-[#F5F7FA]">
+                  <span class="material-symbols-outlined text-6xl">person</span>
+                </div>
+              }
             </div>
+            <h2 class="text-2xl font-bold text-[#0B1C30]">{{ studentDetails().student.first_name }} {{ studentDetails().student.last_name }}</h2>
+            <p class="text-sm text-[#6B7280]">Matricule : {{ studentDetails().student.registration_number }}</p>
+          </div>
+
+          <!-- Bouton fermer -->
+          <div class="flex justify-end mb-4">
             <button type="button" (click)="closeDetailModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors">
               <span class="material-symbols-outlined">close</span>
             </button>
@@ -272,6 +281,21 @@
 
         <form (ngSubmit)="onSubmitEdit()">
           <div class="space-y-4">
+            
+            <!-- ✅ PHOTO DE PROFIL DANS LE FORMULAIRE -->
+            <div class="flex flex-col items-center mb-6">
+              <div class="relative group cursor-pointer" (click)="openPhotoSelector()">
+                <div class="w-32 h-32 rounded-full overflow-hidden border-4 border-[#E8F0FE] group-hover:border-[#15157D] transition-colors shadow-md bg-gray-100">
+                  <img [src]="photoPreview()" class="w-full h-full object-cover" alt="Aperçu photo">
+                  <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span class="material-symbols-outlined text-white text-3xl">add_a_photo</span>
+                  </div>
+                </div>
+              </div>
+              <input type="file" id="photoInput" accept="image/jpeg,image/png,image/jpg" class="hidden" (change)="onPhotoSelected($event)" />
+              <p class="text-xs text-[#6B7280] mt-2">Cliquez pour changer la photo (Max 2Mo)</p>
+            </div>
+
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-sm font-medium text-[#0B1C30] mb-1">Prénom <span class="text-[#BB0013]">*</span></label>

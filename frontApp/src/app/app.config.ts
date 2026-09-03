@@ -3,8 +3,10 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideToastr } from 'ngx-toastr';
+
 import { routes } from './app.routes';
 import { credentialsInterceptor } from './core/interceptors/credentials-interceptor';
+import { authInterceptor } from './core/interceptors/auth-interceptor'; // ✅ AJOUTÉ
 import { errorInterceptor } from './core/interceptors/error-interceptor';
 import { loadingInterceptor } from './core/interceptors/loading-interceptor';
 
@@ -13,7 +15,12 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(
-      withInterceptors([credentialsInterceptor, errorInterceptor, loadingInterceptor])
+      withInterceptors([
+        authInterceptor,          // ✅ En premier pour catcher 401/419
+        credentialsInterceptor,   // ✅ Ajoute withCredentials: true
+        errorInterceptor,
+        loadingInterceptor
+      ])
     ),
     provideAnimations(),
     provideToastr({

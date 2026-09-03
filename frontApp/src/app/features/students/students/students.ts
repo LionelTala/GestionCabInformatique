@@ -7,6 +7,7 @@ import { FormationService } from '../../../core/services/formation';
 import { CampusService } from '../../../core/services/campus';
 import { AcademicYearService } from '../../../core/services/academic-year';
 import { Auth } from '../../../core/services/auth';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-students',
@@ -15,7 +16,10 @@ import { Auth } from '../../../core/services/auth';
   templateUrl: './students.html',
   styleUrl: './students.css'
 })
+ 
 export class StudentsComponent implements OnInit {
+  baseUrl = environment.apiUrl;
+
   private studentService = inject(StudentService);
   private formationService = inject(FormationService);
   private campusService = inject(CampusService);
@@ -34,6 +38,8 @@ export class StudentsComponent implements OnInit {
 
   currentPage = signal(1);
   submitting = signal(false);
+  photoFile = signal<File | null>(null);
+  photoPreview = signal<string>('');
 
   // Filtres
   filters = signal({
@@ -131,13 +137,25 @@ export class StudentsComponent implements OnInit {
   }
 
   // === MODAL ÉDITION ===
-  openEditModal() {
+    openEditModal() {
     const details = this.studentDetails();
     if (!details) return;
 
     this.editFormData.set({ ...details.student });
     this.editErrors.set({ first_name: '', last_name: '', email: '' });
+    
+    // ✅ Utiliser la route sécurisée pour la prévisualisation
+    if (details.student.photo) {
+      this.photoPreview.set(this.getPhotoUrl(details.student.id));
+    } else {
+      this.photoPreview.set('assets/default-avatar.png');
+    }
+    this.photoFile.set(null);
+    
     this.showEditModal.set(true);
+  }
+   getPhotoUrl(studentId: number): string {
+    return `${this.baseUrl}/students/${studentId}/photo`;
   }
 
   closeEditModal() {
@@ -173,6 +191,19 @@ export class StudentsComponent implements OnInit {
 
     return valid;
   }
+  onPhotoSelected(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) {
+      this.photoFile.set(file);
+      const reader = new FileReader();
+      reader.onload = () => this.photoPreview.set(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  }
+
+    // === COPIE EXACTE DE LA LOGIQUE DE REGISTRATIONS ===
+  
+ 
 
   onSubmitEdit() {
     if (!this.validateEditForm()) {
@@ -183,7 +214,25 @@ export class StudentsComponent implements OnInit {
     const data = this.editFormData();
     this.submitting.set(true);
 
-    this.studentService.updateStudent(data.id, data).subscribe({
+    // ✅ CONSTRUCTION DU FORMDATA EXACTEMENT COMME DANS REGISTRATIONS
+    const formData = new FormData();
+    formData.append('_method', 'PUT');
+    
+    Object.keys(data).forEach(key => {
+      const value = data[key as keyof typeof data];
+      // On ajoute la valeur si elle n'est ni null ni undefined
+      if (value !== null && value !== undefined) {
+        formData.append(key, value.toString());
+      }
+    });
+
+    // ✅ AJOUT DE LA PHOTO À LA FIN
+    if (this.photoFile()) {
+      formData.append('photo', this.photoFile()!);
+    }
+
+    // ✅ APPEL AU SERVICE
+    this.studentService.updateStudent(data.id, formData).subscribe({
       next: () => {
         this.toastr.success('Informations modifiées avec succès');
         this.closeEditModal();
@@ -197,7 +246,6 @@ export class StudentsComponent implements OnInit {
       }
     });
   }
-
   // === UTILITAIRES ===
   formatPrice(price: number): string {
     return (price || 0).toLocaleString('fr-FR') + ' FCFA';
@@ -224,6 +272,13 @@ export class StudentsComponent implements OnInit {
       paid: 'bg-green-100 text-green-700',
     };
     return classes[status] || 'bg-gray-100 text-gray-700';
+  }
+    // ✅ MÉTHODE POUR OUVRIR LE SÉLECTEUR DE FICHIER
+  openPhotoSelector() {
+    const input = document.getElementById('photoInput') as HTMLInputElement;
+    if (input) {
+      input.click();
+    }
   }
 
   canSeeAllCampuses(): boolean {

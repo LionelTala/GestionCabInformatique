@@ -116,10 +116,7 @@ class ExpenseController extends Controller
         DB::beginTransaction();
         try {
             // Générer une référence unique
-            $reference = 'DEP-' . now()->format('Ymd') . '-' . str_pad(
-                FinancialTransaction::whereDate('created_at', today())->count() + 1,
-                4, '0', STR_PAD_LEFT
-            );
+            $reference = 'DEP-' . now()->format('Ymd') . '-' . substr(md5(uniqid(mt_rand(), true)), 0, 8);
 
             $expense = FinancialTransaction::create([
                 'registration_id' => null, // Pas lié à une inscription

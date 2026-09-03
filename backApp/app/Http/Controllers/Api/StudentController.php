@@ -8,6 +8,8 @@ use App\Models\Registration;
 use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+    use Illuminate\Support\Facades\Storage;
+
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -166,20 +168,18 @@ class StudentController extends Controller
     }
 
     // ═══ MODIFIER LES INFOS PERSONNELLES ═══
-    public function update(Request $request, int $id)
+           public function update(Request $request, int $id)
     {
         $user = $request->user();
-
-        if (!in_array($user->role, ['super_admin', 'admin_global', 'admin_campus', 'secretary'])) {
-            return response()->json(['message' => 'Accès non autorisé'], 403);
-        }
-
         $student = Student::findOrFail($id);
 
-        // Vérification des droits campus
         if (in_array($user->role, ['admin_campus', 'secretary']) && $student->campus_id !== $user->campus_id) {
             return response()->json(['message' => 'Accès non autorisé à ce campus'], 403);
         }
+
+        // Log de toutes les données reçues pour débogage
+        \Illuminate\Support\Facades\Log::info('📥 DONNÉES REÇUES PAR LARAVEL :', $request->all());
+        \Illuminate\Support\Facades\Log::info('📁 FICHIER PRÉSENT ? : ' . ($request->hasFile('photo') ? 'OUI' : 'NON'));
 
         $validated = $request->validate([
             'first_name' => 'sometimes|string|max:100',
@@ -190,12 +190,31 @@ class StudentController extends Controller
             'date_of_birth' => 'nullable|date',
             'parent_name' => 'nullable|string|max:255',
             'parent_phone' => 'nullable|string|max:20',
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', 
         ]);
 
         DB::beginTransaction();
         try {
-            $oldData = $student->only(['first_name', 'last_name', 'email', 'phone', 'address', 'date_of_birth', 'parent_name', 'parent_phone']);
+            $oldData = $student->only(['first_name', 'last_name', 'email', 'phone', 'address', 'date_of_birth', 'parent_name', 'parent_phone', 'photo']);
             
+            if ($request->hasFile('photo')) {
+                \Illuminate\Support\Facades\Log::info('✅ ENTRÉE DANS LE BLOC DE STOCKAGE DE LA PHOTO');
+                
+                $file = $request->file('photo');
+                \Illuminate\Support\Facades\Log::info('📸 Nom du fichier : ' . $file->getClientOriginalName());
+
+                if ($student->photo && Storage::disk('private')->exists($student->photo)) {
+                    Storage::disk('private')->delete($student->photo);
+                }
+                
+                $path = $file->store('students', 'private');
+                \Illuminate\Support\Facades\Log::info('💾 Chemin sauvegardé : ' . $path);
+                
+                $validated['photo'] = $path;
+            } else {
+                \Illuminate\Support\Facades\Log::info('⚠️ AUCUN FICHIER DÉTECTÉ PAR LARAVEL DANS LA REQUÊTE');
+            }
+
             $student->update($validated);
 
             $this->activityLogService->log(
@@ -205,20 +224,49 @@ class StudentController extends Controller
                 targetName: $student->first_name . ' ' . $student->last_name,
                 oldData: $oldData,
                 newData: $validated,
-                changes: 'Modification des informations personnelles de ' . $student->first_name . ' ' . $student->last_name,
+                changes: 'Modification des informations de ' . $student->first_name . ' ' . $student->last_name,
                 campusId: $student->campus_id
             );
 
             DB::commit();
         } catch (Throwable $e) {
             DB::rollBack();
-            Log::error('StudentController@update', ['error' => $e->getMessage()]);
-            return response()->json(['message' => 'Erreur lors de la modification'], 500);
+            \Illuminate\Support\Facades\Log::error('StudentController@update', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Erreur lors de la modification : ' . $e->getMessage()], 500);
         }
 
         return response()->json([
             'message' => 'Informations modifiées avec succès',
             'data' => $student
         ]);
+    }
+// ...
+
+        /**
+     * Sert la photo d'un étudiant depuis le disque privé
+     */
+    public function getPhoto(Request $request, int $id)
+    {
+        $user = $request->user();
+        $student = Student::findOrFail($id);
+
+        // Vérification des droits campus
+        if (in_array($user->role, ['admin_campus', 'secretary']) && $student->campus_id !== $user->campus_id) {
+            return response()->json(['message' => 'Accès non autorisé'], 403);
+        }
+
+        // Vérifier que la photo existe
+        if (!$student->photo || !Storage::disk('private')->exists($student->photo)) {
+            return response('', 204);
+        }
+
+        // ✅ CORRECTION : Récupérer le chemin réel et utiliser mime_content_type
+        $path = Storage::disk('private')->path($student->photo);
+        $file = Storage::disk('private')->get($student->photo);
+        $mimeType = mime_content_type($path);
+
+        return response($file, 200)
+            ->header('Content-Type', $mimeType)
+            ->header('Cache-Control', 'public, max-age=86400');
     }
 }
