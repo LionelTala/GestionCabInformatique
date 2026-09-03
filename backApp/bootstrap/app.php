@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             StartSession::class,
         ]);
+        $middleware->statefulApi();
 
         $middleware->alias([
             'campus.access' => CampusAccess::class,
