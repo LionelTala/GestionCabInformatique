@@ -17,7 +17,8 @@
           "builder": "@angular/build:application",
           "options": {
             "outputPath": {
-      "base": "../backApp/public"
+      "base": "../backApp/public",
+       "browser": "" 
     },
             "browser": "src/main.ts",
             "polyfills": ["zone.js"],

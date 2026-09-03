@@ -290,4 +290,112 @@ export class StudentsComponent implements OnInit {
     const user = this.currentUser;
     return user && ['super_admin', 'admin_global', 'admin_campus', 'secretary'].includes(user.role);
   }
+
+    // === MODAL RAPPORT SCOLARITÉ ===
+  showReportModal = signal(false);
+  reportData = signal<any>(null);
+  loadingReport = signal(false);
+  reportFilters = signal({
+    campus_id: null as number | null,
+    formation_id: null as number | null,
+    payment_status: '' as string,
+  });
+
+  // === MODAL LISTE SIMPLE ===
+  showListModal = signal(false);
+  listData = signal<any>(null);
+  loadingList = signal(false);
+  listFilters = signal({
+    campus_id: null as number | null,
+    formation_id: null as number | null,
+    search: '',
+  });
+
+  // === RAPPORT SCOLARITÉ ===
+  openReportModal() {
+    this.reportFilters.set({ campus_id: null, formation_id: null, payment_status: '' });
+    this.reportData.set(null);
+    this.showReportModal.set(true);
+    this.loadReport();
+  }
+
+  closeReportModal() {
+    this.showReportModal.set(false);
+    this.reportData.set(null);
+  }
+
+  loadReport() {
+    this.loadingReport.set(true);
+    const f = this.reportFilters();
+    const params: any = {};
+    if (f.campus_id != null) params.campus_id = f.campus_id;
+    if (f.formation_id != null) params.formation_id = f.formation_id;
+    if (f.payment_status) params.payment_status = f.payment_status;
+
+    this.studentService.getScholarshipReport(params).subscribe({
+      next: (res) => {
+        this.reportData.set(res.data);
+        this.loadingReport.set(false);
+      },
+      error: () => this.loadingReport.set(false)
+    });
+  }
+
+  downloadReport() {
+    const f = this.reportFilters();
+    const params: any = {};
+    if (f.campus_id != null) params.campus_id = f.campus_id;
+    if (f.formation_id != null) params.formation_id = f.formation_id;
+    if (f.payment_status) params.payment_status = f.payment_status;
+    this.studentService.downloadScholarshipReport(params);
+  }
+
+  // === LISTE SIMPLE ===
+  openListModal() {
+    this.listFilters.set({ campus_id: null, formation_id: null, search: '' });
+    this.listData.set(null);
+    this.showListModal.set(true);
+    this.loadSimpleList();
+  }
+
+  closeListModal() {
+    this.showListModal.set(false);
+    this.listData.set(null);
+  }
+
+  loadSimpleList() {
+    this.loadingList.set(true);
+    const f = this.listFilters();
+    const params: any = {};
+    if (f.campus_id != null) params.campus_id = f.campus_id;
+    if (f.formation_id != null) params.formation_id = f.formation_id;
+    if (f.search) params.search = f.search;
+
+    this.studentService.getSimpleList(params).subscribe({
+      next: (res) => {
+        this.listData.set(res.data);
+        this.loadingList.set(false);
+      },
+      error: () => this.loadingList.set(false)
+    });
+  }
+
+  downloadList() {
+    const f = this.listFilters();
+    const params: any = {};
+    if (f.campus_id != null) params.campus_id = f.campus_id;
+    if (f.formation_id != null) params.formation_id = f.formation_id;
+    if (f.search) params.search = f.search;
+    this.studentService.downloadSimpleList(params);
+  }
+
+  getStatusLabel(status: string): string {
+    const labels: Record<string, string> = { paid: 'Soldé', partial: 'Partiel', unpaid: 'Non payé' };
+    return labels[status] || status;
+  }
+
+  getStatusClass(status: string): string {
+    const classes: Record<string, string> = { paid: 'bg-green-100 text-green-700', partial: 'bg-yellow-100 text-yellow-700', unpaid: 'bg-red-100 text-red-700' };
+    return classes[status] || 'bg-gray-100 text-gray-700';
+  }
 }

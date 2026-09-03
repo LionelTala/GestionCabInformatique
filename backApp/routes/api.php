@@ -139,10 +139,18 @@ Route::prefix('v1')->group(function () {
 
  
                 // ═══ ÉTUDIANTS (Lecture + Modification infos personnelles uniquement) ═══
-        Route::get('/students', [StudentController::class, 'index']);
+    
+        Route::get('/students/scholarship-report', [StudentController::class, 'scholarshipReport']);
+        Route::get('/students/scholarship-report/pdf', [StudentController::class, 'generateScholarshipReport']);
+        Route::get('/students/simple-list', [StudentController::class, 'simpleList']);
+        Route::get('/students/simple-list/pdf', [StudentController::class, 'generateSimpleList']);
+        
+        
+            Route::get('/students', [StudentController::class, 'index']);
         Route::get('/students/{id}', [StudentController::class, 'show']);
         Route::put('/students/{id}', [StudentController::class, 'update']);
         Route::get('/students/{id}/photo', [StudentController::class, 'getPhoto']);
+                // ═══ RAPPORTS ÉTUDIANTS ═══
 
                 // ═══ DÉPENSES ═══
         Route::get('/expenses', [ExpenseController::class, 'index']);

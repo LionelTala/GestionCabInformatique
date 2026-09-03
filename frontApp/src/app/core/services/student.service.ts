@@ -52,4 +52,56 @@ export class StudentService {
    updateStudent(id: number, data: FormData) {
     return this.http.post<any>(`${this.apiUrl}/students/${id}`, data);
   }
+    getScholarshipReport(filters: any = {}) {
+    return this.http.get<any>(`${this.apiUrl}/students/scholarship-report`, { params: filters });
+  }
+
+  downloadScholarshipReport(filters: any = {}) {
+    return this.http.get(`${this.apiUrl}/students/scholarship-report/pdf`, { 
+      params: filters,
+      responseType: 'blob' // ✅ Indique à Angular d'attendre un fichier binaire
+    }).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `rapport-scolarite-${new Date().getTime()}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Erreur téléchargement PDF', err);
+        // Si c'est une erreur 401, l'intercepteur auth te déconnectera automatiquement
+      }
+    });
+  }
+
+  downloadSimpleList(filters: any = {}) {
+    return this.http.get(`${this.apiUrl}/students/simple-list/pdf`, { 
+      params: filters,
+      responseType: 'blob'
+    }).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `liste-etudiants-${new Date().getTime()}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Erreur téléchargement PDF', err);
+      }
+    });
+  }
+
+  getSimpleList(filters: any = {}) {
+    return this.http.get<any>(`${this.apiUrl}/students/simple-list`, { params: filters });
+  }
+
+ 
 }

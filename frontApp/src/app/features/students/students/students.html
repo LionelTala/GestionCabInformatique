@@ -1,12 +1,28 @@
 <div class="p-6">
   <!-- Header -->
-  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 animate-fade-in-up" style="animation-delay: 0.1s;">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 animate-fade-in-up" style="animation-delay: 0.1s;">
     <div>
       <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
         <span class="material-symbols-outlined text-[#15157D] text-3xl">school</span>
         Gestion des Étudiants
       </h1>
       <p class="text-[#6B7280] text-sm mt-1">Consultez les dossiers de scolarité des étudiants</p>
+    </div>
+    <div class="flex gap-2">
+      <button 
+        (click)="openListModal()"
+        class="bg-white text-[#15157D] border border-[#15157D] px-4 py-2.5 rounded-xl hover:bg-[#E8F0FE] transition-all flex items-center gap-2 font-medium text-sm"
+      >
+        <span class="material-symbols-outlined text-lg">list_alt</span>
+        Liste
+      </button>
+      <button 
+        (click)="openReportModal()"
+        class="bg-[#15157D] text-white px-4 py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm"
+      >
+        <span class="material-symbols-outlined text-lg">assessment</span>
+        Rapport de scolarité
+      </button>
     </div>
   </div>
 
@@ -252,6 +268,254 @@
             } @empty {
               <p class="text-sm text-[#6B7280] text-center py-4">Aucune inscription trouvée</p>
             }
+          </div>
+        }
+      </div>
+    </div>
+  }
+    <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL RAPPORT SCOLARITÉ -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showReportModal()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeReportModal()">
+      <div class="bg-white rounded-2xl w-full max-w-6xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up" (click)="$event.stopPropagation()">
+        
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+              <span class="material-symbols-outlined text-2xl">assessment</span>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-[#0B1C30]">Rapport État de Scolarité</h2>
+              <p class="text-sm text-[#6B7280]">Vue détaillée par formation avec récapitulatifs</p>
+            </div>
+          </div>
+          <button type="button" (click)="closeReportModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Filtres -->
+        <div class="bg-[#F5F7FA] rounded-xl p-4 mb-4">
+          <div class="flex flex-wrap gap-3 items-end">
+            @if (canSeeAllCampuses()) {
+              <div class="flex-1 min-w-[150px]">
+                <label class="block text-xs font-medium text-[#6B7280] mb-1">Campus</label>
+                <select [(ngModel)]="reportFilters().campus_id" (change)="loadReport()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm">
+                  <option [ngValue]="null">Tous les campus</option>
+                  @for (c of campuses(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+                </select>
+              </div>
+            }
+            <div class="flex-1 min-w-[150px]">
+              <label class="block text-xs font-medium text-[#6B7280] mb-1">Formation</label>
+              <select [(ngModel)]="reportFilters().formation_id" (change)="loadReport()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm">
+                <option [ngValue]="null">Toutes les formations</option>
+                @for (f of formations(); track f.id) { <option [value]="f.id">{{ f.name }}</option> }
+              </select>
+            </div>
+            <div class="flex-1 min-w-[150px]">
+              <label class="block text-xs font-medium text-[#6B7280] mb-1">Statut</label>
+              <select [(ngModel)]="reportFilters().payment_status" (change)="loadReport()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm">
+                <option value="">Tous</option>
+                <option value="paid">Soldé</option>
+                <option value="partial">Partiel</option>
+                <option value="unpaid">Non payé</option>
+              </select>
+            </div>
+            <button (click)="downloadReport()" class="px-4 py-2 bg-[#15157D] text-white text-sm font-medium rounded-lg hover:bg-[#2E3192] transition-colors flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+              Télécharger PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenu du rapport -->
+        @if (loadingReport()) {
+          <div class="flex items-center justify-center py-20">
+            <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+          </div>
+        } @else if (reportData()) {
+
+          <!-- Récap général -->
+          <div class="bg-[#15157D] text-white rounded-xl p-4 mb-4 grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+            <div>
+              <p class="text-[10px] uppercase opacity-70">Étudiants</p>
+              <p class="text-xl font-bold">{{ reportData().grand_total.students }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase opacity-70">Attendu</p>
+              <p class="text-xl font-bold">{{ formatPrice(reportData().grand_total.expected) }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase opacity-70">Perçu</p>
+              <p class="text-xl font-bold text-green-300">{{ formatPrice(reportData().grand_total.paid) }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase opacity-70">Reste</p>
+              <p class="text-xl font-bold text-red-300">{{ formatPrice(reportData().grand_total.balance) }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase opacity-70">Recouvrement</p>
+              <p class="text-xl font-bold">{{ reportData().grand_total.expected > 0 ? ((reportData().grand_total.paid / reportData().grand_total.expected) * 100).toFixed(1) : 0 }}%</p>
+            </div>
+          </div>
+
+          <!-- Par campus / formation -->
+          @for (campusData of reportData().grouped_data; track campusData.campus?.id) {
+            
+            @if (canSeeAllCampuses() && reportData().grouped_data.length > 1) {
+              <div class="bg-[#15157D] text-white p-3 rounded-lg mb-3">
+                <h3 class="font-bold">{{ campusData.campus?.name }}</h3>
+              </div>
+            }
+
+            @for (form of campusData.formations; track form.formation.id) {
+              <div class="mb-4 border border-[#E5E7EB] rounded-xl overflow-hidden">
+                <div class="bg-[#E8F0FE] px-4 py-2 border-l-4 border-[#15157D] flex justify-between items-center">
+                  <h4 class="font-semibold text-[#15157D] text-sm">{{ form.formation.name }} ({{ form.student_count }} étudiant(s))</h4>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead class="bg-[#F5F7FA]">
+                      <tr>
+                        <th class="text-left px-3 py-2 text-xs font-medium text-[#6B7280]">Matricule</th>
+                        <th class="text-left px-3 py-2 text-xs font-medium text-[#6B7280]">Nom</th>
+                        <th class="text-right px-3 py-2 text-xs font-medium text-[#6B7280]">Attendu</th>
+                        <th class="text-right px-3 py-2 text-xs font-medium text-[#6B7280]">Payé</th>
+                        <th class="text-right px-3 py-2 text-xs font-medium text-[#6B7280]">Reste</th>
+                        <th class="text-center px-3 py-2 text-xs font-medium text-[#6B7280]">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#E5E7EB]">
+                      @for (s of form.students; track s.id) {
+                        <tr class="hover:bg-[#F9FAFB]">
+                          <td class="px-3 py-2 font-mono text-xs text-[#15157D]">{{ s.matricule }}</td>
+                          <td class="px-3 py-2 text-sm">{{ s.name }}</td>
+                          <td class="px-3 py-2 text-right text-sm">{{ formatPrice(s.total_expected) }}</td>
+                          <td class="px-3 py-2 text-right text-sm text-green-700 font-medium">{{ formatPrice(s.amount_paid) }}</td>
+                          <td class="px-3 py-2 text-right text-sm text-red-700 font-medium">{{ formatPrice(s.balance) }}</td>
+                          <td class="px-3 py-2 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ getStatusClass(s.status) }}">
+                              {{ getStatusLabel(s.status) }}
+                            </span>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                    <tfoot class="bg-[#F9FAFB]">
+                      <tr class="font-semibold text-xs">
+                        <td colspan="2" class="px-3 py-2">Récap Formation</td>
+                        <td class="px-3 py-2 text-right">{{ formatPrice(form.total_expected) }}</td>
+                        <td class="px-3 py-2 text-right text-green-700">{{ formatPrice(form.total_paid) }}</td>
+                        <td class="px-3 py-2 text-right text-red-700">{{ formatPrice(form.total_balance) }}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            }
+
+            @if (canSeeAllCampuses() && reportData().grouped_data.length > 1) {
+              <div class="bg-[#E8F0FE] rounded-lg p-3 mb-4 grid grid-cols-4 gap-3 text-center text-sm">
+                <div><span class="text-xs text-[#6B7280]">Étudiants</span><p class="font-bold text-[#15157D]">{{ campusData.campus_total_students }}</p></div>
+                <div><span class="text-xs text-[#6B7280]">Attendu</span><p class="font-bold">{{ formatPrice(campusData.campus_total_expected) }}</p></div>
+                <div><span class="text-xs text-[#6B7280]">Perçu</span><p class="font-bold text-green-700">{{ formatPrice(campusData.campus_total_paid) }}</p></div>
+                <div><span class="text-xs text-[#6B7280]">Reste</span><p class="font-bold text-red-700">{{ formatPrice(campusData.campus_total_balance) }}</p></div>
+              </div>
+            }
+          }
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL LISTE SIMPLE -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showListModal()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeListModal()">
+      <div class="bg-white rounded-2xl w-full max-w-5xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up" (click)="$event.stopPropagation()">
+        
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+              <span class="material-symbols-outlined text-2xl">list_alt</span>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-[#0B1C30]">Liste des Étudiants</h2>
+              <p class="text-sm text-[#6B7280]">Liste simple avec informations de base</p>
+            </div>
+          </div>
+          <button type="button" (click)="closeListModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Filtres -->
+        <div class="bg-[#F5F7FA] rounded-xl p-4 mb-4">
+          <div class="flex flex-wrap gap-3 items-end">
+            @if (canSeeAllCampuses()) {
+              <div class="flex-1 min-w-[150px]">
+                <label class="block text-xs font-medium text-[#6B7280] mb-1">Campus</label>
+                <select [(ngModel)]="listFilters().campus_id" (change)="loadSimpleList()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm">
+                  <option [ngValue]="null">Tous</option>
+                  @for (c of campuses(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+                </select>
+              </div>
+            }
+            <div class="flex-1 min-w-[150px]">
+              <label class="block text-xs font-medium text-[#6B7280] mb-1">Formation</label>
+              <select [(ngModel)]="listFilters().formation_id" (change)="loadSimpleList()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm">
+                <option [ngValue]="null">Toutes</option>
+                @for (f of formations(); track f.id) { <option [value]="f.id">{{ f.name }}</option> }
+              </select>
+            </div>
+            <div class="flex-1 min-w-[150px]">
+              <label class="block text-xs font-medium text-[#6B7280] mb-1">Recherche</label>
+              <input type="text" [(ngModel)]="listFilters().search" (keyup.enter)="loadSimpleList()" placeholder="Nom ou matricule..." class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm" />
+            </div>
+            <button (click)="downloadList()" class="px-4 py-2 bg-[#15157D] text-white text-sm font-medium rounded-lg hover:bg-[#2E3192] transition-colors flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+              PDF
+            </button>
+          </div>
+        </div>
+
+        @if (loadingList()) {
+          <div class="flex items-center justify-center py-20">
+            <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+          </div>
+        } @else if (listData()) {
+          <div class="bg-[#15157D] text-white rounded-lg p-3 mb-4 text-center">
+            <span class="font-bold text-lg">{{ listData().total }}</span> étudiant(s)
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-[#F5F7FA]">
+                <tr>
+                  <th class="text-left px-3 py-2 text-xs font-medium text-[#6B7280]">N°</th>
+                  <th class="text-left px-3 py-2 text-xs font-medium text-[#6B7280]">Matricule</th>
+                  <th class="text-left px-3 py-2 text-xs font-medium text-[#6B7280]">Nom complet</th>
+                  <th class="text-left px-3 py-2 text-xs font-medium text-[#6B7280]">Téléphone</th>
+                  <th class="text-left px-3 py-2 text-xs font-medium text-[#6B7280]">Formation</th>
+                  <th class="text-left px-3 py-2 text-xs font-medium text-[#6B7280]">Campus</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[#E5E7EB]">
+                @for (s of listData().students; track s.matricule; let i = $index) {
+                  <tr class="hover:bg-[#F9FAFB]">
+                    <td class="px-3 py-2 text-xs text-[#6B7280]">{{ i + 1 }}</td>
+                    <td class="px-3 py-2 font-mono text-xs text-[#15157D] font-semibold">{{ s.matricule }}</td>
+                    <td class="px-3 py-2 font-medium">{{ s.name }}</td>
+                    <td class="px-3 py-2 text-[#6B7280]">{{ s.phone || '-' }}</td>
+                    <td class="px-3 py-2 text-[#6B7280]">{{ s.formation }}</td>
+                    <td class="px-3 py-2 text-[#6B7280]">{{ s.campus }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           </div>
         }
       </div>
