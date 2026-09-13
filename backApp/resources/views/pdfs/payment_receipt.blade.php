@@ -5,7 +5,7 @@
     <title>Reçu de paiement - {{ $payment->reference }}</title>
     <style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 11px; line-height: 1.2; margin: 8px 6px; color: #333; }
-        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; border-bottom: 2px solid #2563EB; padding-bottom: 10px; }   /* ✅ 18px → 12px */
+        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; border-bottom: 2px solid #2563EB; padding-bottom: 10px; }
         .header-table td { vertical-align: middle; }
         .logo-cell { width: 100px; text-align: left; }
         .logo { width: 70px; height: 70px; border-radius: 50%; object-fit: contain; border: none; }
@@ -22,12 +22,12 @@
         .amount { font-size: 15px; font-weight: bold; color: #e67e22; }
         .signatures-table { width: 100%; margin-top: 20px; margin-bottom: 14px; border-collapse: collapse; }
         .signatures-table td { width: 50%; text-align: center; vertical-align: bottom; padding: 0 20px; }
-        .signature-line { border-top: 1px solid #333; margin-top: 22px; padding-top: 8px; font-size: 10px; }   /* ✅ 30px → 22px */
-        .qr-section { margin-top: 4px; text-align: center; }   /* ✅ 10px → 4px */
+        .signature-line { border-top: 1px solid #333; margin-top: 22px; padding-top: 8px; font-size: 10px; }
+        .qr-section { margin-top: 4px; text-align: center; }
         .qr-code { width: 80px; height: 80px; }
         .qr-text { font-size: 9px; color: #2563EB; margin-top: 5px; }
-        .footer { text-align: center; font-size: 8px; color: #999; border-top: 0.5px solid #ccc; padding-top: 8px; margin-top: 10px; }   /* ✅ 12px → 10px */
-        .receipt-copy { page-break-after: avoid; margin-bottom: 4px; padding-bottom: 4px; }   /* ✅ 12px → 4px */
+        .footer { text-align: center; font-size: 8px; color: #999; border-top: 0.5px solid #ccc; padding-top: 8px; margin-top: 10px; }
+        .receipt-copy { page-break-after: avoid; margin-bottom: 4px; padding-bottom: 4px; }
         .first-copy { border-bottom: 1px dashed #ccc; }
         @page { margin: 6px 6px; }
     </style>
@@ -47,6 +47,9 @@
         ['label' => 'ÉTUDIANT', 'note' => 'Exemplaire à conserver par l\'étudiant'],
         ['label' => 'ADMINISTRATION', 'note' => 'Exemplaire à conserver par le centre'],
     ];
+
+    // ✅ Récupérer le créateur du paiement (pas l'utilisateur qui génère le PDF)
+    $creator = $payment->createdBy ?? null;
 @endphp
 
 @foreach($copies as $index => $copy)
@@ -67,7 +70,7 @@
                 <td class="info-cell">
                     <div class="brand-name">CAB INFORMATIQUE</div>
                     @if($campusName)
-                        <div class="campus-name"> {{ $campusName }}</div>
+                        <div class="campus-name">{{ $campusName }}</div>
                     @endif
                     <div class="school-info">
                         {{ $campus->address ?? '' }}
@@ -94,9 +97,16 @@
             </tr>
             <tr>
                 <td class="info-label">Étudiant :</td>
-                <td class="info-value">{{ $student->registration_number }} - {{ $student->first_name }} {{ $student->last_name }}</td>
+                <td class="info-value">{{ $student->registration_number }} - {{ $student->last_name }} {{ $student->first_name }}</td>
                 <td class="info-label">Enr. par :</td>
-                <td class="info-value">{{ $user->first_name }} {{ $user->last_name }}</td>
+                {{-- ✅ Nom puis Prénom du CRÉATEUR du paiement --}}
+                <td class="info-value">
+                    @if($creator)
+                        {{ $creator->last_name }} {{ $creator->first_name }}
+                    @else
+                        -
+                    @endif
+                </td>
             </tr>
             <tr>
                 <td class="info-label">Formation :</td>
@@ -128,8 +138,7 @@
 
         {{-- ═══ FOOTER ═══ --}}
         <div class="footer">
-            Merci de faire confiance à CAB Informatique
-            @if($campusName) — Campus {{ $campusName }}@endif
+            {{ $campus->name ?? 'CAB Informatique' }} - Merci de faire confiance à notre établissement.
         </div>
     </div>
 @endforeach
