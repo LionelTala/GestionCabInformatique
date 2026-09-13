@@ -24,8 +24,8 @@ class Scolarity extends Model
     {
         return [
             'tuition_fees' => 'decimal:2',
-            'amount_paid' => 'decimal:2',
-            'balance' => 'decimal:2',
+            'amount_paid'  => 'decimal:2',
+            'balance'      => 'decimal:2',
         ];
     }
 
@@ -43,5 +43,20 @@ class Scolarity extends Model
     public function campus(): BelongsTo
     {
         return $this->belongsTo(Campus::class);
+    }
+
+    // ═══ HELPERS ═══
+
+    /**
+     * ✅ Vérifie si cette scolarité est synchronisée avec registration.custom_tuition
+     * Utile pour debug / commande de resync
+     */
+    public function isSyncedWithRegistration(): bool
+    {
+        $reg = $this->registration;
+        if (!$reg) return false;
+
+        $expectedTuition = (float) $reg->effective_tuition;
+        return abs((float) $this->tuition_fees - $expectedTuition) < 0.01;
     }
 }

@@ -1,0 +1,519 @@
+<div class="p-6">
+
+  <!-- ═══ Header ═══ -->
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#15157D] text-3xl">workspace_premium</span>
+        Attestations de fin de formation
+      </h1>
+      <p class="text-[#6B7280] text-sm mt-1">Gérez les demandes d'attestations des étudiants</p>
+    </div>
+    <button (click)="openModal()"
+      class="bg-[#15157D] text-white px-5 py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm">
+      <span class="material-symbols-outlined text-lg">add</span>
+      Nouvelle attestation
+    </button>
+  </div>
+
+  <!-- ═══ KPIs + Onglets ═══ -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+    <button (click)="switchTab('pending')"
+      [class.bg-[#15157D]]="activeTab() === 'pending'"
+      [class.text-white]="activeTab() === 'pending'"
+      [class.bg-white]="activeTab() !== 'pending'"
+      [class.text-[#0B1C30]]="activeTab() !== 'pending'"
+      class="rounded-xl shadow-sm border border-[#E5E7EB] p-4 text-left hover:shadow-md transition-all">
+      <div class="flex items-center justify-between mb-1">
+        <span class="material-symbols-outlined text-2xl"
+          [class.opacity-80]="activeTab() === 'pending'"
+          [class.text-[#15157D]]="activeTab() !== 'pending'">pending_actions</span>
+        <span class="text-2xl font-bold">{{ stats().pending }}</span>
+      </div>
+      <p class="text-xs font-medium"
+        [class.opacity-80]="activeTab() === 'pending'"
+        [class.text-[#6B7280]]="activeTab() !== 'pending'">En attente</p>
+    </button>
+
+    <button (click)="switchTab('ready')"
+      [class.bg-emerald-600]="activeTab() === 'ready'"
+      [class.text-white]="activeTab() === 'ready'"
+      [class.bg-white]="activeTab() !== 'ready'"
+      [class.text-[#0B1C30]]="activeTab() !== 'ready'"
+      class="rounded-xl shadow-sm border border-[#E5E7EB] p-4 text-left hover:shadow-md transition-all">
+      <div class="flex items-center justify-between mb-1">
+        <span class="material-symbols-outlined text-2xl"
+          [class.opacity-80]="activeTab() === 'ready'"
+          [class.text-emerald-600]="activeTab() !== 'ready'">check_circle</span>
+        <span class="text-2xl font-bold">{{ stats().ready }}</span>
+      </div>
+      <p class="text-xs font-medium"
+        [class.opacity-80]="activeTab() === 'ready'"
+        [class.text-[#6B7280]]="activeTab() !== 'ready'">Réglées</p>
+    </button>
+
+    <div class="col-span-2 sm:col-span-1 bg-gradient-to-br from-[#15157D] to-[#2E3192] text-white rounded-xl shadow-sm p-4">
+      <div class="flex items-center justify-between mb-1">
+        <span class="material-symbols-outlined text-2xl opacity-80">inventory_2</span>
+        <span class="text-2xl font-bold">{{ stats().total }}</span>
+      </div>
+      <p class="text-xs font-medium opacity-80">Total</p>
+    </div>
+  </div>
+
+  <!-- ═══ Filtres ═══ -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4 mb-4">
+    <div class="flex flex-wrap items-end gap-4">
+      <div class="flex-1 min-w-[180px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Rechercher</label>
+        <input type="text" [(ngModel)]="filters().search" (keyup.enter)="applyFilters()"
+          placeholder="Nom ou matricule..."
+          class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none" />
+      </div>
+
+      @if (canSeeAllCampuses()) {
+        <div class="flex-1 min-w-[150px]">
+          <label class="block text-xs font-medium text-[#6B7280] mb-1">Campus</label>
+          <select [(ngModel)]="filters().campus_id" (change)="applyFilters(); loadStats()"
+            class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none">
+            <option [ngValue]="null">Tous les campus</option>
+            @for (campus of campuses(); track campus.id) {
+              <option [value]="campus.id">{{ campus.name }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      <button (click)="applyFilters()"
+        class="px-4 py-2 bg-[#15157D] text-white text-sm font-medium rounded-lg hover:bg-[#2E3192] transition-colors">
+        Rechercher
+      </button>
+      <button (click)="resetFilters()"
+        class="px-4 py-2 text-sm text-[#6B7280] hover:text-[#15157D] hover:bg-[#E8F0FE] rounded-lg transition-colors">
+        <span class="material-symbols-outlined text-sm align-middle">refresh</span> Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ Tableau ═══ -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+    @if (loading()) {
+      <div class="flex flex-col items-center justify-center py-20">
+        <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+        <p class="text-[#6B7280] mt-4 text-sm">Chargement...</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-[#F5F7FA] border-b border-[#E5E7EB]">
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Référence</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Étudiant</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Formation</th>
+              @if (activeTab() === 'pending') {
+                <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Demandé le</th>
+                <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Par</th>
+              } @else {
+                <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Réglé le</th>
+                <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Par</th>
+              }
+              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#E5E7EB]">
+            @for (a of attestations(); track a.id; let i = $index) {
+              <tr class="hover:bg-[#F5F7FA] transition-colors animate-fade-in-up"
+                [style.animation-delay]="(0.1 + (i * 0.03)) + 's'">
+
+                <!-- Référence -->
+                <td class="px-6 py-4">
+                  <span class="font-mono text-xs font-semibold text-[#15157D]">{{ a.reference }}</span>
+                </td>
+
+                <!-- Étudiant -->
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                      [class.bg-[#E8F0FE]]="activeTab() === 'pending'"
+                      [class.text-[#15157D]]="activeTab() === 'pending'"
+                      [class.bg-emerald-100]="activeTab() === 'ready'"
+                      [class.text-emerald-700]="activeTab() === 'ready'">
+                      {{ getStudentInitials(a) }}
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-[#0B1C30]">{{ getStudentName(a) }}</p>
+                      <p class="text-xs text-[#6B7280]">{{ a.student?.registration_number || '-' }}</p>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Formation -->
+                <td class="px-6 py-4 text-sm text-[#6B7280]">
+                  {{ a.registration?.formation?.name || '-' }}
+                </td>
+
+                <!-- Date + Par -->
+                @if (activeTab() === 'pending') {
+                  <td class="px-6 py-4 text-sm text-[#6B7280]">{{ formatDate(a.requested_at) }}</td>
+                  <td class="px-6 py-4 text-xs text-[#6B7280]">
+                    {{ a.requested_by_user?.first_name }} {{ a.requested_by_user?.last_name }}
+                  </td>
+                } @else {
+                  <td class="px-6 py-4 text-sm text-emerald-700 font-medium">{{ formatDate(a.settled_at) }}</td>
+                  <td class="px-6 py-4 text-xs text-[#6B7280]">
+                    {{ a.settled_by_user?.first_name }} {{ a.settled_by_user?.last_name }}
+                  </td>
+                }
+
+                <!-- ✅ Actions (un seul bloc) -->
+                <td class="px-6 py-4 text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    @if (activeTab() === 'pending') {
+                      <!-- Régler -->
+                      <button (click)="openSettleModal(a)"
+                        class="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 transition-colors"
+                        title="Régler l'attestation">
+                        <span class="material-symbols-outlined text-xl">check_circle</span>
+                      </button>
+
+                      <!-- ✅ Annuler (icône poubelle) -->
+                      <button (click)="openCancelModal(a)"
+                        class="p-2 rounded-lg hover:bg-red-50 text-[#6B7280] hover:text-[#BB0013] transition-colors"
+                        title="Annuler la demande">
+                        <span class="material-symbols-outlined text-xl">delete</span>
+                      </button>
+                    } @else {
+                      <!-- Remettre en attente -->
+                      <button (click)="openUnsettleModal(a)"
+                        class="p-2 rounded-lg hover:bg-amber-50 text-amber-600 hover:text-amber-700 transition-colors"
+                        title="Remettre en attente">
+                        <span class="material-symbols-outlined text-xl">undo</span>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="text-center py-12 text-[#6B7280]">
+                  <span class="material-symbols-outlined text-5xl text-[#E5E7EB] block mb-3">
+                    {{ activeTab() === 'pending' ? 'pending_actions' : 'check_circle' }}
+                  </span>
+                  <p>
+                    @if (activeTab() === 'pending') {
+                      Aucune demande en attente
+                    } @else {
+                      Aucune attestation réglée
+                    }
+                  </p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (meta().total > 0) {
+        <div class="flex items-center justify-between px-6 py-4 border-t border-[#E5E7EB]">
+          <div class="text-sm text-[#6B7280]">
+            Affichage de <span class="font-medium">{{ meta().from }}</span> à
+            <span class="font-medium">{{ meta().to }}</span> sur
+            <span class="font-medium">{{ meta().total }}</span>
+            {{ activeTab() === 'pending' ? 'demandes' : 'attestations' }}
+          </div>
+          <div class="flex items-center gap-1">
+            <button (click)="goToPage(meta().current_page - 1)" [disabled]="meta().current_page === 1"
+              class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-sm">chevron_left</span>
+            </button>
+            @for (page of getPages(); track $index) {
+              @if (page === -1) { <span class="px-2 text-[#6B7280]">…</span> }
+              @else {
+                <button (click)="goToPage(page)"
+                  [class.bg-[#15157D]]="page === meta().current_page"
+                  [class.text-white]="page === meta().current_page"
+                  [class.text-[#6B7280]]="page !== meta().current_page"
+                  [class.font-medium]="page === meta().current_page"
+                  class="w-8 h-8 rounded-lg hover:bg-[#F5F7FA] transition-colors text-sm">
+                  {{ page }}
+                </button>
+              }
+            }
+            <button (click)="goToPage(meta().current_page + 1)" [disabled]="meta().current_page === meta().last_page"
+              class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-sm">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL NOUVELLE ATTESTATION -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showModal()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+      (click)="closeModal()">
+      <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up"
+        (click)="$event.stopPropagation()">
+
+        <!-- ÉTAPE 1 : RECHERCHE ÉTUDIANT -->
+        @if (modalStep() === 1) {
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+                <span class="material-symbols-outlined text-2xl">search</span>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold text-[#0B1C30]">Rechercher un étudiant</h2>
+                <p class="text-sm text-[#6B7280]">Nom ou matricule</p>
+              </div>
+            </div>
+            <button (click)="closeModal()"
+              class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div class="relative mb-4">
+            <input type="text" [(ngModel)]="searchQuery" (input)="onSearch()"
+              placeholder="Tapez le nom ou le matricule..."
+              class="w-full px-4 py-3 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" />
+            @if (searching()) {
+              <span class="absolute right-3 top-3 material-symbols-outlined animate-spin text-[#15157D]">refresh</span>
+            }
+          </div>
+
+          <div class="max-h-80 overflow-y-auto space-y-2">
+            @for (s of searchResults(); track s.id) {
+              <div (click)="selectStudent(s)"
+                class="p-3 border border-[#E5E7EB] rounded-lg hover:bg-[#E8F0FE] cursor-pointer transition-colors flex justify-between items-center">
+                <div class="min-w-0">
+                  <div class="font-semibold text-[#0B1C30]">{{ s.name }}</div>
+                  <div class="text-xs text-[#6B7280]">
+                    {{ s.matricule }} • {{ s.formation }}
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-[#15157D]">chevron_right</span>
+              </div>
+            } @empty {
+              @if (searchQuery().length >= 2 && !searching()) {
+                <p class="text-center text-sm text-[#6B7280] py-4">Aucun étudiant trouvé</p>
+              } @else if (searchQuery().length < 2) {
+                <p class="text-center text-sm text-[#6B7280] py-4">Tapez au moins 2 caractères</p>
+              }
+            }
+          </div>
+        }
+
+        <!-- ÉTAPE 2 : CONFIRMATION -->
+        @if (modalStep() === 2 && selectedStudent()) {
+          <div class="flex items-center gap-2 mb-6">
+            <button (click)="goBackToSearch()"
+              class="text-sm text-[#6B7280] hover:text-[#15157D] flex items-center gap-1 transition-colors">
+              <span class="material-symbols-outlined text-sm">arrow_back</span> Retour
+            </button>
+            <div class="flex items-center gap-3 ml-2">
+              <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+                <span class="material-symbols-outlined text-2xl">workspace_premium</span>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold text-[#0B1C30]">Confirmer la demande</h2>
+                <p class="text-sm text-[#6B7280]">Attestation de fin de formation</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-[#F5F7FA] p-4 rounded-xl mb-6 space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-[#6B7280]">Étudiant :</span>
+              <span class="font-semibold text-[#0B1C30]">{{ selectedStudent().name }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-[#6B7280]">Matricule :</span>
+              <span class="font-semibold text-[#0B1C30]">{{ selectedStudent().matricule }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-[#6B7280]">Formation :</span>
+              <span class="font-semibold text-[#0B1C30]">{{ selectedStudent().formation }}</span>
+            </div>
+            @if (selectedStudent().campus) {
+              <div class="flex justify-between">
+                <span class="text-[#6B7280]">Campus :</span>
+                <span class="font-semibold text-[#0B1C30]">{{ selectedStudent().campus }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="flex gap-3 justify-end pt-4 border-t border-[#E5E7EB]">
+            <button type="button" (click)="closeModal()"
+              class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">
+              Annuler
+            </button>
+            <button type="button" (click)="onSubmit()" [disabled]="submitting()"
+              class="px-5 py-2.5 bg-[#15157D] text-white text-sm font-medium rounded-xl hover:bg-[#2E3192] transition-all shadow-md disabled:opacity-50 flex items-center gap-2">
+              @if (submitting()) {
+                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Enregistrement...
+              } @else {
+                <span class="material-symbols-outlined text-sm">check</span>
+                Initier la demande
+              }
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ═══ MODAL RÉGLER ═══ -->
+  @if (showSettleModal() && attestationToSettle()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+      (click)="closeSettleModal()">
+      <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-slide-up"
+        (click)="$event.stopPropagation()">
+
+        <div class="flex flex-col items-center text-center">
+          <div class="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mb-4">
+            <span class="material-symbols-outlined text-4xl">check_circle</span>
+          </div>
+          <h2 class="text-xl font-bold text-[#0B1C30]">Régler cette attestation ?</h2>
+          <p class="text-[#6B7280] text-sm mt-2">
+            L'attestation passera dans la liste des <strong>attestations réglées</strong>.
+          </p>
+        </div>
+
+        <div class="bg-[#F5F7FA] rounded-xl p-4 my-6 space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-[#6B7280]">Référence :</span>
+            <span class="font-mono text-xs text-[#15157D]">{{ attestationToSettle()!.reference }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-[#6B7280]">Étudiant :</span>
+            <span class="font-semibold text-[#0B1C30]">{{ getStudentName(attestationToSettle()!) }}</span>
+          </div>
+        </div>
+
+        <div class="flex gap-3 justify-center pt-4 border-t border-[#E5E7EB]">
+          <button type="button" (click)="closeSettleModal()"
+            class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">
+            Annuler
+          </button>
+          <button type="button" (click)="confirmSettle()" [disabled]="submitting()"
+            class="px-5 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition-all shadow-md disabled:opacity-50 flex items-center gap-2">
+            @if (submitting()) {
+              <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              Règlement...
+            } @else {
+              <span class="material-symbols-outlined text-sm">check_circle</span>
+              Régler
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ═══ MODAL REMETTRE EN ATTENTE ═══ -->
+  @if (showUnsettleModal() && attestationToUnsettle()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+      (click)="closeUnsettleModal()">
+      <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-slide-up"
+        (click)="$event.stopPropagation()">
+
+        <div class="flex flex-col items-center text-center">
+          <div class="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 mb-4">
+            <span class="material-symbols-outlined text-4xl">undo</span>
+          </div>
+          <h2 class="text-xl font-bold text-[#0B1C30]">Remettre en attente ?</h2>
+          <p class="text-[#6B7280] text-sm mt-2">
+            Cette attestation retournera dans la liste des <strong>demandes en attente</strong>.
+          </p>
+        </div>
+
+        <div class="bg-[#F5F7FA] rounded-xl p-4 my-6 space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-[#6B7280]">Référence :</span>
+            <span class="font-mono text-xs text-[#15157D]">{{ attestationToUnsettle()!.reference }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-[#6B7280]">Étudiant :</span>
+            <span class="font-semibold text-[#0B1C30]">{{ getStudentName(attestationToUnsettle()!) }}</span>
+          </div>
+        </div>
+
+        <div class="flex gap-3 justify-center pt-4 border-t border-[#E5E7EB]">
+          <button type="button" (click)="closeUnsettleModal()"
+            class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">
+            Annuler
+          </button>
+          <button type="button" (click)="confirmUnsettle()" [disabled]="submitting()"
+            class="px-5 py-2.5 bg-amber-600 text-white text-sm font-medium rounded-xl hover:bg-amber-700 transition-all shadow-md disabled:opacity-50 flex items-center gap-2">
+            @if (submitting()) {
+              <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              Traitement...
+            } @else {
+              <span class="material-symbols-outlined text-sm">undo</span>
+              Remettre en attente
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ═══ MODAL ANNULER ═══ -->
+  @if (showCancelModal() && attestationToCancel()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+      (click)="closeCancelModal()">
+      <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-slide-up"
+        (click)="$event.stopPropagation()">
+
+        <div class="flex flex-col items-center text-center">
+          <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-[#BB0013] mb-4">
+            <span class="material-symbols-outlined text-4xl">delete_forever</span>
+          </div>
+          <h2 class="text-xl font-bold text-[#0B1C30]">Annuler cette demande ?</h2>
+          <p class="text-[#6B7280] text-sm mt-2">
+            Cette action est <strong>définitive</strong> et retirera la demande du système.
+          </p>
+        </div>
+
+        <div class="bg-[#F5F7FA] rounded-xl p-4 my-6 space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-[#6B7280]">Référence :</span>
+            <span class="font-mono text-xs text-[#15157D]">{{ attestationToCancel()!.reference }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-[#6B7280]">Étudiant :</span>
+            <span class="font-semibold text-[#0B1C30]">{{ getStudentName(attestationToCancel()!) }}</span>
+          </div>
+        </div>
+
+        <p class="text-xs text-[#BB0013] text-center mb-6 flex items-center justify-center gap-1">
+          <span class="material-symbols-outlined text-sm">warning</span>
+          La demande sera supprimée définitivement
+        </p>
+
+        <div class="flex gap-3 justify-center pt-4 border-t border-[#E5E7EB]">
+          <button type="button" (click)="closeCancelModal()"
+            class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">
+            Garder
+          </button>
+          <button type="button" (click)="confirmCancel()" [disabled]="submitting()"
+            class="px-5 py-2.5 bg-[#BB0013] text-white text-sm font-medium rounded-xl hover:bg-[#93000D] transition-all shadow-md disabled:opacity-50 flex items-center gap-2">
+            @if (submitting()) {
+              <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              Annulation...
+            } @else {
+              <span class="material-symbols-outlined text-sm">delete</span>
+              Annuler la demande
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

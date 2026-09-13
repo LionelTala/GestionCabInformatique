@@ -1,0 +1,453 @@
+<div class="p-4 sm:p-6 space-y-4 sm:space-y-6">
+
+  <!-- ═══ En-tête ═══ -->
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 animate-fade-in-up">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-[#0B1C30]">Tableau de Bord</h1>
+      <p class="text-[#6B7280] text-xs sm:text-sm mt-1">
+        Bienvenue, <span class="font-semibold text-[#15157D]">{{ currentUser?.first_name }}</span>
+        <span class="hidden sm:inline"> • {{ getRoleTitle() }}</span>
+      </p>
+    </div>
+
+    <!-- ✅ Chips de période -->
+    <div class="flex flex-wrap gap-1.5 sm:gap-2">
+      @for (p of periods; track p.key) {
+        <button
+          (click)="setPeriod(p.key)"
+          [class.bg-[#15157D]]="period() === p.key"
+          [class.text-white]="period() === p.key"
+          [class.bg-white]="period() !== p.key"
+          [class.text-[#6B7280]]="period() !== p.key"
+          [class.border-[#15157D]]="period() === p.key"
+          [class.border-[#E5E7EB]]="period() !== p.key"
+          class="px-2.5 py-1.5 rounded-lg border text-[11px] sm:text-xs font-medium flex items-center gap-1 transition-all hover:border-[#15157D]"
+        >
+          <span class="material-symbols-outlined text-sm">{{ p.icon }}</span>
+          <span class="hidden sm:inline">{{ p.label }}</span>
+          <span class="sm:hidden">{{ p.short }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- ✅ Dates custom -->
+  @if (period() === 'custom') {
+    <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-3 flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-[140px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Du</label>
+        <input
+          type="date"
+          [(ngModel)]="dateFrom"
+          (change)="loadStats()"
+          class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none"
+        />
+      </div>
+      <div class="flex-1 min-w-[140px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Au</label>
+        <input
+          type="date"
+          [(ngModel)]="dateTo"
+          (change)="loadStats()"
+          class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none"
+        />
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="flex items-center justify-center py-20">
+      <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+    </div>
+  } @else if (stats()) {
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- KPIs PRINCIPAUX -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+
+      <!-- Étudiants (total absolu, non filtré par période) -->
+      <div class="kpi-card kpi-purple">
+        <div class="kpi-blob"></div>
+        <div class="kpi-content">
+          <div class="kpi-header">
+            <span class="material-symbols-outlined kpi-icon">school</span>
+            <span class="kpi-badge">Total</span>
+          </div>
+          <p class="kpi-value">{{ stats().total_students }}</p>
+          <p class="kpi-label">
+            Étudiants
+            @if (stats().new_students_in_period > 0) {
+              <span class="text-[10px] opacity-75">
+                (+{{ stats().new_students_in_period }} {{ getPeriodLabel().toLowerCase() }})
+              </span>
+            }
+          </p>
+        </div>
+      </div>
+
+      <!-- Nouvelles inscriptions (suit la période) -->
+      <div class="kpi-card kpi-green">
+        <div class="kpi-blob"></div>
+        <div class="kpi-content">
+          <div class="kpi-header">
+            <span class="material-symbols-outlined kpi-icon">person_add</span>
+            <span class="kpi-badge">{{ getPeriodLabel() }}</span>
+          </div>
+          <p class="kpi-value">{{ stats().new_registrations }}</p>
+          <p class="kpi-label">Inscriptions</p>
+        </div>
+      </div>
+
+      <!-- Scolarité encaissée (suit la période) -->
+      <div class="kpi-card kpi-blue">
+        <div class="kpi-blob"></div>
+        <div class="kpi-content">
+          <div class="kpi-header">
+            <span class="material-symbols-outlined kpi-icon">payments</span>
+            <span class="kpi-badge">Scolarité</span>
+          </div>
+          <p class="kpi-value kpi-value-sm">{{ formatPriceShort(stats().scolarity_income) }}</p>
+          <p class="kpi-label">Encaissé</p>
+        </div>
+      </div>
+
+      <!-- Caisse (suit la période) -->
+      <div class="kpi-card kpi-amber">
+        <div class="kpi-blob"></div>
+        <div class="kpi-content">
+          <div class="kpi-header">
+            <span class="material-symbols-outlined kpi-icon">point_of_sale</span>
+            <span class="kpi-badge">Caisse</span>
+          </div>
+          <p class="kpi-value kpi-value-sm">{{ formatPriceShort(stats().cash_balance) }}</p>
+          <p class="kpi-label">Solde caisse</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- BANDEAU SOLDE PÉRIODE -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] p-4 sm:p-5">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+          <div class="w-10 h-10 rounded-full bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+            <span class="material-symbols-outlined text-xl">account_balance</span>
+          </div>
+          <span class="font-semibold text-[#0B1C30] text-sm sm:text-base">
+            Solde {{ getPeriodLabel() }}
+          </span>
+        </div>
+
+        <div class="flex items-center justify-between w-full sm:w-auto gap-3 sm:gap-6 text-center">
+          <div>
+            <p class="text-[10px] sm:text-xs text-[#6B7280]">Scolarité</p>
+            <p class="font-bold text-green-600 text-sm sm:text-base">
+              {{ formatPrice(stats().scolarity_balance) }}
+            </p>
+          </div>
+          <span class="text-[#6B7280]">+</span>
+          <div>
+            <p class="text-[10px] sm:text-xs text-[#6B7280]">Caisse</p>
+            <p
+              class="font-bold text-sm sm:text-base"
+              [class.text-green-600]="stats().cash_balance >= 0"
+              [class.text-red-600]="stats().cash_balance < 0"
+            >
+              {{ formatPrice(stats().cash_balance) }}
+            </p>
+          </div>
+          <span class="text-[#6B7280]">=</span>
+          <div>
+            <p class="text-[10px] sm:text-xs text-[#6B7280]">Total</p>
+            <p
+              class="text-lg sm:text-xl font-bold"
+              [class.text-green-600]="(stats().scolarity_balance + stats().cash_balance) >= 0"
+              [class.text-red-600]="(stats().scolarity_balance + stats().cash_balance) < 0"
+            >
+              {{ formatPrice(stats().scolarity_balance + stats().cash_balance) }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- DÉTAILS SCOLARITÉ / CAISSE -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+
+      <!-- Scolarité -->
+      <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+        <div class="p-4 border-b border-[#E5E7EB] flex items-center gap-2 bg-gradient-to-r from-blue-50 to-white">
+          <span class="material-symbols-outlined text-blue-600">school</span>
+          <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Scolarité</h3>
+          <span class="ml-auto text-[10px] sm:text-xs text-[#6B7280]">{{ getPeriodLabel() }}</span>
+        </div>
+        <div class="p-4 grid grid-cols-2 gap-4">
+          <div class="bg-green-50 rounded-xl p-3">
+            <p class="text-[10px] sm:text-xs text-green-700">Encaissé</p>
+            <p class="text-base sm:text-lg font-bold text-green-800 mt-1">
+              {{ formatPrice(stats().scolarity_income) }}
+            </p>
+          </div>
+          <div class="bg-red-50 rounded-xl p-3">
+            <p class="text-[10px] sm:text-xs text-red-700">Annulations</p>
+            <p class="text-base sm:text-lg font-bold text-red-800 mt-1">
+              {{ formatPrice(stats().scolarity_expense) }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Caisse -->
+      <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+        <div class="p-4 border-b border-[#E5E7EB] flex items-center gap-2 bg-gradient-to-r from-amber-50 to-white">
+          <span class="material-symbols-outlined text-amber-600">point_of_sale</span>
+          <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Caisse</h3>
+          <span class="ml-auto text-[10px] sm:text-xs text-[#6B7280]">{{ getPeriodLabel() }}</span>
+        </div>
+        <div class="p-4 grid grid-cols-2 gap-4">
+          <div class="bg-green-50 rounded-xl p-3">
+            <p class="text-[10px] sm:text-xs text-green-700">Entrées</p>
+            <p class="text-base sm:text-lg font-bold text-green-800 mt-1">
+              {{ formatPrice(stats().cash_income) }}
+            </p>
+          </div>
+          <div class="bg-red-50 rounded-xl p-3">
+            <p class="text-[10px] sm:text-xs text-red-700">Sorties</p>
+            <p class="text-base sm:text-lg font-bold text-red-800 mt-1">
+              {{ formatPrice(stats().cash_expense) }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- ACTIVITÉS RÉCENTES -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+
+      <!-- Derniers paiements -->
+      <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+        <div class="p-3 sm:p-4 border-b border-[#E5E7EB] flex justify-between items-center bg-gradient-to-r from-green-50 to-white">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-green-600">payments</span>
+            <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Paiements récents</h3>
+          </div>
+          <a routerLink="/payments" class="text-[10px] sm:text-xs text-[#15157D] hover:underline font-medium flex items-center gap-1">
+            Voir <span class="material-symbols-outlined text-sm">arrow_forward</span>
+          </a>
+        </div>
+        <div class="divide-y divide-[#E5E7EB] max-h-80 overflow-y-auto">
+          @for (payment of stats().recent_payments; track payment.id) {
+            <div class="p-3 sm:p-4 hover:bg-[#F9FAFB] transition-colors flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3 min-w-0 flex-1">
+                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-green-100 flex items-center justify-center text-green-700 flex-shrink-0">
+                  <span class="material-symbols-outlined text-base sm:text-lg">arrow_upward</span>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs sm:text-sm font-medium text-[#0B1C30] truncate">{{ payment.description }}</p>
+                  <p class="text-[10px] sm:text-xs text-[#6B7280] truncate">
+                    {{ payment.reference }} • {{ formatDate(payment.created_at) }}
+                  </p>
+                </div>
+              </div>
+              <span class="text-xs sm:text-sm font-bold text-green-600 whitespace-nowrap">
+                +{{ formatPriceShort(payment.amount) }}
+              </span>
+            </div>
+          } @empty {
+            <div class="p-6 text-center text-[#6B7280] text-xs sm:text-sm">
+              <span class="material-symbols-outlined text-3xl sm:text-4xl text-[#E5E7EB] block mb-2">payments</span>
+              Aucun paiement pour {{ getPeriodLabel().toLowerCase() }}
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Mouvements de caisse -->
+      <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+        <div class="p-3 sm:p-4 border-b border-[#E5E7EB] flex justify-between items-center bg-gradient-to-r from-amber-50 to-white">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-600">point_of_sale</span>
+            <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Caisse récente</h3>
+          </div>
+          <a routerLink="/cash-movements" class="text-[10px] sm:text-xs text-[#15157D] hover:underline font-medium flex items-center gap-1">
+            Voir <span class="material-symbols-outlined text-sm">arrow_forward</span>
+          </a>
+        </div>
+        <div class="divide-y divide-[#E5E7EB] max-h-80 overflow-y-auto">
+          @for (m of stats().recent_cash_movements; track m.id) {
+            <div class="p-3 sm:p-4 hover:bg-[#F9FAFB] transition-colors flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3 min-w-0 flex-1">
+                <div
+                  class="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                  [class.bg-green-100]="m.type === 'income'"
+                  [class.text-green-700]="m.type === 'income'"
+                  [class.bg-red-100]="m.type === 'expense'"
+                  [class.text-red-700]="m.type === 'expense'"
+                >
+                  <span class="material-symbols-outlined text-base sm:text-lg">
+                    {{ m.type === 'income' ? 'arrow_upward' : 'arrow_downward' }}
+                  </span>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs sm:text-sm font-medium text-[#0B1C30] truncate">{{ m.title }}</p>
+                  <p class="text-[10px] sm:text-xs text-[#6B7280] truncate">
+                    {{ getCategoryLabel(m.category) }} • {{ formatDate(m.created_at) }}
+                  </p>
+                </div>
+              </div>
+              <span
+                class="text-xs sm:text-sm font-bold whitespace-nowrap"
+                [class.text-green-600]="m.type === 'income'"
+                [class.text-red-600]="m.type === 'expense'"
+              >
+                {{ m.type === 'income' ? '+' : '-' }}{{ formatPriceShort(m.amount) }}
+              </span>
+            </div>
+          } @empty {
+            <div class="p-6 text-center text-[#6B7280] text-xs sm:text-sm">
+              <span class="material-symbols-outlined text-3xl sm:text-4xl text-[#E5E7EB] block mb-2">point_of_sale</span>
+              Aucun mouvement pour {{ getPeriodLabel().toLowerCase() }}
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- ANNULATIONS RÉCENTES -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    @if (stats().recent_cancellations?.length > 0) {
+      <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+        <div class="p-3 sm:p-4 border-b border-[#E5E7EB] flex items-center gap-2 bg-gradient-to-r from-red-50 to-white">
+          <span class="material-symbols-outlined text-red-600">undo</span>
+          <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Annulations récentes</h3>
+          <span class="ml-auto text-[10px] sm:text-xs text-[#6B7280]">{{ getPeriodLabel() }}</span>
+        </div>
+        <div class="divide-y divide-[#E5E7EB] max-h-72 overflow-y-auto">
+          @for (c of stats().recent_cancellations; track c.id) {
+            <div class="p-3 sm:p-4 hover:bg-[#F9FAFB] transition-colors flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3 min-w-0 flex-1">
+                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-red-100 flex items-center justify-center text-red-700 flex-shrink-0">
+                  <span class="material-symbols-outlined text-base sm:text-lg">undo</span>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs sm:text-sm font-medium text-[#0B1C30] truncate">{{ c.description }}</p>
+                  <p class="text-[10px] sm:text-xs text-[#6B7280] truncate">
+                    {{ getCategoryLabel(c.category) }} • {{ formatDate(c.created_at) }}
+                  </p>
+                </div>
+              </div>
+              <span class="text-xs sm:text-sm font-bold text-red-600 whitespace-nowrap">
+                -{{ formatPriceShort(c.amount) }}
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- DERNIÈRES INSCRIPTIONS -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+      <div class="p-3 sm:p-4 border-b border-[#E5E7EB] flex justify-between items-center bg-gradient-to-r from-blue-50 to-white">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[#15157D]">person_add</span>
+          <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Dernières inscriptions</h3>
+          <span class="text-[10px] sm:text-xs text-[#6B7280]">({{ getPeriodLabel() }})</span>
+        </div>
+        <a routerLink="/registrations" class="text-[10px] sm:text-xs text-[#15157D] hover:underline font-medium flex items-center gap-1">
+          Voir <span class="material-symbols-outlined text-sm">arrow_forward</span>
+        </a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs sm:text-sm min-w-[500px]">
+          <thead class="bg-[#F5F7FA] text-[#6B7280]">
+            <tr>
+              <th class="text-left px-3 sm:px-4 py-2 sm:py-3 font-medium">Étudiant</th>
+              <th class="text-left px-3 sm:px-4 py-2 sm:py-3 font-medium">Formation</th>
+              <th class="text-left px-3 sm:px-4 py-2 sm:py-3 font-medium">Campus</th>
+              <th class="text-right px-3 sm:px-4 py-2 sm:py-3 font-medium">Versement</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#E5E7EB]">
+            @for (act of stats().recent_activities; track act.id) {
+              <tr class="hover:bg-[#F9FAFB] transition-colors">
+                <td class="px-3 sm:px-4 py-2 sm:py-3">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-full bg-[#E8F0FE] flex items-center justify-center text-[#15157D] font-bold text-[10px] flex-shrink-0">
+                      {{ getInitials(act.student_name) }}
+                    </div>
+                    <div class="min-w-0">
+                      <p class="font-medium text-[#0B1C30] truncate">{{ act.student_name }}</p>
+                      <p class="text-[10px] text-[#6B7280]">{{ act.matricule }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 sm:px-4 py-2 sm:py-3 text-[#6B7280] truncate max-w-[120px]">{{ act.formation }}</td>
+                <td class="px-3 sm:px-4 py-2 sm:py-3 text-[#6B7280] truncate max-w-[100px]">{{ act.campus }}</td>
+                <td class="px-3 sm:px-4 py-2 sm:py-3 text-right font-semibold text-green-700 whitespace-nowrap">
+                  {{ formatPriceShort(act.amount_paid) }}
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4" class="text-center py-6 text-[#6B7280] text-xs sm:text-sm">
+                  Aucune inscription pour {{ getPeriodLabel().toLowerCase() }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- RÉPARTITION PAR CAMPUS (super admin / admin_global) -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    @if (isSuperAdmin() && stats().campus_breakdown?.length > 0) {
+      <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+        <div class="p-3 sm:p-4 border-b border-[#E5E7EB] bg-gradient-to-r from-purple-50 to-white">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-purple-600">apartment</span>
+            <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Vue par campus</h3>
+            <span class="ml-auto text-[10px] sm:text-xs text-[#6B7280]">{{ getPeriodLabel() }}</span>
+          </div>
+        </div>
+        <div class="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          @for (campus of stats().campus_breakdown; track campus.id) {
+            <div class="p-3 bg-[#F5F7FA] rounded-xl hover:bg-[#E8F0FE] transition-colors">
+              <div class="flex justify-between items-start mb-2">
+                <div class="min-w-0">
+                  <p class="font-semibold text-[#0B1C30] text-xs sm:text-sm truncate">{{ campus.name }}</p>
+                  <p class="text-[10px] text-[#6B7280]">📍 {{ campus.city }}</p>
+                </div>
+                <span class="bg-[#15157D] text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 sm:py-1 rounded-full flex-shrink-0">
+                  {{ campus.student_count }}
+                </span>
+              </div>
+              <div class="flex justify-between text-[10px] sm:text-xs mt-2 pt-2 border-t border-[#E5E7EB] gap-1">
+                <span class="text-green-700 font-medium">↑ {{ formatPriceShort(campus.period_income) }}</span>
+                <span class="text-red-700 font-medium">↓ {{ formatPriceShort(campus.period_expense) }}</span>
+                <span
+                  class="font-bold"
+                  [class.text-green-700]="campus.balance >= 0"
+                  [class.text-red-700]="campus.balance < 0"
+                >
+                  {{ formatPriceShort(campus.balance) }}
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  }
+</div>

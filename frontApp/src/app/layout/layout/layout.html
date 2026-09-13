@@ -1,7 +1,8 @@
+<!-- ═══ LOADER GLOBAL ═══ -->
 @if (loadingService.isLoading()) {
   <div class="fixed inset-0 bg-[#0B1C30]/30 backdrop-blur-md z-[999] flex items-center justify-center animate-fade-in">
-    <div class="bg-white/90 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-[0_20px_50px_rgba(21,21,125,0.15)] flex flex-col items-center animate-scale-up">
-      <div class="relative w-14 h-14 flex items-center justify-center">
+    <div class="bg-white/90 backdrop-blur-xl border border-white/20 rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(21,21,125,0.15)] flex flex-col items-center animate-scale-up">
+      <div class="relative w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center">
         <div class="absolute inset-0 border-4 border-[#15157D]/10 rounded-full"></div>
         <div class="absolute inset-0 border-4 border-transparent border-t-[#15157D] border-r-[#15157D] rounded-full animate-spin"></div>
         <div class="w-3 h-3 bg-[#15157D] rounded-full animate-pulse"></div>
@@ -12,111 +13,146 @@
   </div>
 }
 
-<div class="min-h-screen bg-[#F8F9FF]">
+<div class="app-shell">
 
   <!-- ═══ SIDEBAR ═══ -->
   <aside
-    [class.-translate-x-full]="!sidebarOpen()"
-    class="fixed left-0 top-0 h-full w-72 bg-white z-50 flex flex-col shadow-[0_1px_8px_rgba(46,49,146,0.05)] transition-transform duration-300 md:translate-x-0"
+    [class.sidebar-closed]="!sidebarOpen()"
+    class="app-sidebar"
   >
-    <div class="px-6 py-5 flex items-center gap-3 border-b border-[#E5E7EB]">
-      <!-- ✅ LOGO REMPLACE LE DIV "CAB" -->
-      <img 
-        src="logo.jpg" 
-        alt="CAB Informatique" 
-        class="h-12 w-12 rounded-full object-cover shadow-md border-2 border-[#15157D]/10"
+    <!-- Header sidebar -->
+    <div class="sidebar-header">
+      <img
+        src="logo.jpg"
+        alt="CAB Informatique"
+        class="sidebar-logo"
       >
-      <div>
-        <span class="text-[#15157D] text-lg font-bold block leading-tight">CAB Admin</span>
-        <span class="text-[#6B7280] text-xs">Système de gestion</span>
+      <div class="min-w-0 flex-1">
+        <span class="block text-[#15157D] text-base sm:text-lg font-bold leading-tight truncate">CAB Admin</span>
+        <span class="block text-[#6B7280] text-[11px] sm:text-xs truncate">Système de gestion</span>
       </div>
-      <button (click)="toggleSidebar()" class="ml-auto md:hidden text-[#6B7280] hover:text-[#15157D] transition-colors">
+      <button
+        (click)="toggleSidebar()"
+        class="md:hidden p-2 -mr-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors"
+        aria-label="Fermer le menu"
+      >
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
 
-    <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
       @for (item of visibleNavItems(); track item.route) {
         <a
           [routerLink]="[item.route]"
           (click)="closeSidebarOnMobile()"
-          routerLinkActive="bg-[#E1E0FF] text-[#15157D] font-bold"
+          routerLinkActive="nav-item-active"
           [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
-          class="flex items-center px-4 py-3 rounded-lg hover:bg-[#E5EEFF] hover:text-[#0B1C30] transition-all group text-[#464652]"
+          class="nav-item"
         >
-          <span class="material-symbols-outlined mr-3 group-hover:scale-110 transition-transform">{{ item.icon }}</span>
-          {{ item.label }}
+          <span class="material-symbols-outlined nav-icon">{{ item.icon }}</span>
+          <span class="nav-label">{{ item.label }}</span>
         </a>
       }
     </nav>
 
-    <div class="p-4 border-t border-[#E5E7EB]">
-      <div class="flex items-center gap-3 p-3 rounded-xl bg-[#F5F7FA] hover:bg-[#E5EEFF] transition-colors cursor-pointer" (click)="logout()">
-        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#15157D] to-[#2E3192] flex items-center justify-center text-white text-sm font-bold shadow-md">
-          {{ user()?.first_name?.[0] }}{{ user()?.last_name?.[0] }}
-        </div>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-semibold text-[#0B1C30] truncate">{{ user()?.first_name }} {{ user()?.last_name }}</p>
-          <p class="text-xs text-[#6B7280] truncate">{{ getRoleLabel(user()?.role) }}</p>
-        </div>
-        <span class="material-symbols-outlined text-[#6B7280] text-sm hover:text-[#BB0013] transition-colors">logout</span>
-      </div>
+    <!-- User footer -->
+    <!-- Sidebar footer -->
+<div class="sidebar-footer">
+  <a
+    [routerLink]="['/profile']"
+    (click)="closeSidebarOnMobile()"
+    class="user-card block no-underline"
+  >
+    <div class="user-avatar">
+      {{ user()?.last_name?.[0] }}{{ user()?.first_name?.[0] }}
     </div>
+    <div class="min-w-0 flex-1">
+      <p class="text-sm font-semibold text-[#0B1C30] truncate">
+        {{ user()?.last_name }} {{ user()?.first_name }}
+      </p>
+      <p class="text-[11px] sm:text-xs text-[#6B7280] truncate">
+        {{ getRoleLabel(user()?.role) }}
+      </p>
+    </div>
+    <span class="material-symbols-outlined text-[#6B7280] text-sm">chevron_right</span>
+  </a>
+
+  <!-- Bouton logout séparé -->
+  <button
+    (click)="logout()"
+    class="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm text-[#6B7280] hover:bg-red-50 hover:text-[#BB0013] transition-colors"
+  >
+    <span class="material-symbols-outlined text-lg">logout</span>
+    Se déconnecter
+  </button>
+</div>
   </aside>
 
+  <!-- Overlay mobile -->
   @if (sidebarOpen()) {
-    <div class="fixed inset-0 bg-black/30 z-40 md:hidden" (click)="toggleSidebar()"></div>
+    <div class="sidebar-overlay" (click)="toggleSidebar()"></div>
   }
 
-  <div class="md:pl-72">
+  <!-- ═══ MAIN ═══ -->
+  <div class="app-main">
 
-    <!-- ═══ HEADER ═══ -->
-    <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[#E5E7EB]">
-      <div class="flex items-center justify-between px-6 h-20">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-inner">
 
-        <div class="flex items-center gap-4">
-          <button (click)="toggleSidebar()" class="md:hidden text-[#0B1C30] p-2 hover:bg-[#F5F7FA] rounded-lg transition-colors">
+        <!-- Gauche : burger + logo -->
+        <div class="header-left">
+          <button
+            (click)="toggleSidebar()"
+            class="icon-btn md:hidden"
+            aria-label="Ouvrir le menu"
+          >
             <span class="material-symbols-outlined">menu</span>
           </button>
-          
-          <!-- ✅ LOGO + NOM CORRIGÉ -->
-          <img 
-            src="logo.jpg" 
-            alt="CAB Informatique" 
-            class="h-12 w-12 rounded-full object-cover border-2 border-[#15157D]/10 shadow-sm hidden sm:block"
+
+          <img
+            src="logo.jpg"
+            alt="CAB Informatique"
+            class="header-logo"
           >
-          <div>
-            <h1 class="text-xl font-bold text-[#0B1C30]">CAB Informatique</h1>
-            <p class="text-xs text-[#6B7280] hidden sm:block">Centre de Formation</p>
+          <div class="min-w-0">
+            <h1 class="text-sm sm:text-base md:text-xl font-bold text-[#0B1C30] leading-tight truncate">
+              CAB Informatique
+            </h1>
+            <p class="text-[10px] sm:text-xs text-[#6B7280] hidden xs:block">Centre de Formation</p>
           </div>
         </div>
 
-        <!-- ❌ DROPDOWN ANNÉES SUPPRIMÉ (desktop) -->
+        <!-- Droite : notifications + user -->
+        <div class="header-right">
 
-        <div class="flex items-center gap-3">
-
-          <div class="relative notif-zone">
+          <!-- Notifications -->
+          <div class="notif-zone relative">
             <button
               (click)="toggleNotifications()"
-              class="p-2.5 rounded-xl hover:bg-[#F5F7FA] transition-colors relative"
+              class="icon-btn relative"
+              aria-label="Notifications"
             >
-              <span class="material-symbols-outlined text-[#6B7280]">notifications</span>
+              <span class="material-symbols-outlined">notifications</span>
               @if (unreadCount() > 0) {
-                <span class="absolute -top-1 -right-1 w-5 h-5 bg-[#BB0013] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+                <span class="notif-badge">
                   {{ unreadCount() > 9 ? '9+' : unreadCount() }}
                 </span>
               }
             </button>
 
             @if (showNotifications()) {
-              <div class="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-[#E5E7EB] z-50 max-h-[400px] flex flex-col animate-fade-in">
-                <div class="p-3 border-b border-[#E5E7EB] flex justify-between items-center">
-                  <span class="font-semibold text-[#0B1C30]">Notifications</span>
+              <div class="notif-panel">
+                <div class="notif-panel-header">
+                  <span class="font-semibold text-[#0B1C30] text-sm">Notifications</span>
                   @if (unreadCount() > 0) {
-                    <button (click)="markAllAsRead()" class="text-xs text-[#4F8FFF] hover:underline">Tout marquer comme lu</button>
+                    <button (click)="markAllAsRead()" class="text-xs text-[#4F8FFF] hover:underline">
+                      Tout marquer comme lu
+                    </button>
                   }
                 </div>
-                <div class="overflow-y-auto flex-1">
+                <div class="notif-panel-body">
                   @if (notifications().length === 0) {
                     <div class="text-center py-8 text-[#6B7280] text-sm">
                       <span class="material-symbols-outlined text-4xl block mb-2 text-[#E5E7EB]">notifications_off</span>
@@ -125,12 +161,12 @@
                   } @else {
                     @for (notif of notifications(); track notif.id) {
                       <div
-                        class="p-3 border-b border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors cursor-pointer"
-                        [class.bg-[#E8F0FE]]="!notif.is_read"
+                        class="notif-item"
+                        [class.notif-item-unread]="!notif.is_read"
                         (click)="markAsRead(notif.id)"
                       >
-                        <p class="text-sm font-medium text-[#0B1C30]">{{ notif.title }}</p>
-                        <p class="text-xs text-[#6B7280]">{{ notif.message }}</p>
+                        <p class="text-sm font-medium text-[#0B1C30] truncate">{{ notif.title }}</p>
+                        <p class="text-xs text-[#6B7280] line-clamp-2">{{ notif.message }}</p>
                         <p class="text-[10px] text-[#9CA3AF] mt-1">{{ formatDate(notif.created_at) }}</p>
                       </div>
                     }
@@ -140,30 +176,37 @@
             }
           </div>
 
-          <div class="h-8 w-px bg-[#E5E7EB] hidden sm:block"></div>
+          <div class="hidden sm:block h-8 w-px bg-[#E5E7EB]"></div>
 
-          <div class="flex items-center gap-3 cursor-pointer group">
+          <!-- User -->
+          <div class="header-user">
             <div class="relative">
-              <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#15157D] to-[#2E3192] flex items-center justify-center text-white text-sm font-bold shadow-md group-hover:shadow-lg transition-shadow">
+              <div class="user-avatar-sm">
                 {{ user()?.first_name?.[0] }}{{ user()?.last_name?.[0] }}
               </div>
-              <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+              <div class="status-dot"></div>
             </div>
-            <div class="hidden sm:block">
-              <p class="text-sm font-semibold text-[#0B1C30] leading-tight">{{ user()?.first_name }} {{ user()?.last_name }}</p>
-              <p class="text-xs text-[#6B7280]">{{ getRoleLabel(user()?.role) }}</p>
+            <div class="hidden md:block min-w-0">
+              <p class="text-sm font-semibold text-[#0B1C30] leading-tight truncate">
+                {{ user()?.last_name }} {{ user()?.first_name }}
+              </p>
+              <p class="text-xs text-[#6B7280] truncate">{{ getRoleLabel(user()?.role) }}</p>
             </div>
-            <button (click)="logout()" class="p-2 rounded-xl hover:bg-[#F5F7FA] transition-colors text-[#6B7280] hover:text-[#BB0013]" title="Déconnexion">
+            <button
+              (click)="logout()"
+              class="icon-btn hidden sm:flex"
+              title="Déconnexion"
+              aria-label="Déconnexion"
+            >
               <span class="material-symbols-outlined text-sm">logout</span>
             </button>
           </div>
         </div>
       </div>
-
-      <!-- ❌ DROPDOWN ANNÉES SUPPRIMÉ (mobile) -->
     </header>
 
-    <main class="p-6">
+    <!-- Contenu -->
+    <main class="app-content">
       <router-outlet></router-outlet>
     </main>
   </div>

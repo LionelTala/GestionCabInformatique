@@ -2,11 +2,14 @@
     RewriteEngine On
     RewriteBase /
 
-    # 1. SI l'URL commence par api ou sanctum, on FORCE Apache à l'envoyer vers l'index.php de Laravel
-    RewriteRule ^(sanctum|api)(.*)$ index.php [L]
+    # ✅ 1. Routes Laravel explicites → index.php
+    RewriteRule ^(api|sanctum|verify-document)(/.*)?$ index.php [L]
 
-    # 2. SINON, si ce n'est pas un fichier ou un dossier réel, on donne la main au index.html d'Angular
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
+    # ✅ 2. Si fichier/dossier physique existe → servir direct
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # ✅ 3. Fallback Angular
     RewriteRule . /index.html [L]
 </IfModule>

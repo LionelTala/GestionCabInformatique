@@ -1,0 +1,328 @@
+<!-- src/app/features/profile/profile/profile.html -->
+<div class="p-3 sm:p-6 max-w-3xl mx-auto">
+
+  <!-- ═══ Header ═══ -->
+  <div class="mb-4 sm:mb-6">
+    <h1 class="text-xl sm:text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
+      <span class="material-symbols-outlined text-[#15157D] text-2xl sm:text-3xl">account_circle</span>
+      Mon Profil
+    </h1>
+    <p class="text-[#6B7280] text-xs sm:text-sm mt-1">Gérez vos informations personnelles</p>
+  </div>
+
+  <!-- ═══ Carte identité ═══ -->
+  <div class="bg-gradient-to-br from-[#15157D] to-[#2E3192] text-white rounded-2xl p-5 sm:p-6 mb-4 sm:mb-6 shadow-lg">
+    <div class="flex items-center gap-4">
+      <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl sm:text-3xl font-bold flex-shrink-0">
+        {{ getInitials() }}
+      </div>
+      <div class="min-w-0 flex-1">
+        <!-- ✅ Nom AVANT Prénom -->
+        <h2 class="text-lg sm:text-2xl font-bold truncate">
+          {{ currentUser?.last_name }} {{ currentUser?.first_name }}
+        </h2>
+        <p class="text-sm opacity-90 truncate">{{ currentUser?.email || 'Aucun email' }}</p>
+        <span class="inline-block mt-1 bg-white/20 text-xs px-2 py-0.5 rounded-full">
+          {{ getRoleLabel(currentUser?.role) }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Onglets ═══ -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-1 mb-4 sm:mb-6">
+    <div class="flex gap-1">
+      <button
+        (click)="setTab('info')"
+        [class.bg-[#15157D]]="activeTab() === 'info'"
+        [class.text-white]="activeTab() === 'info'"
+        [class.text-[#6B7280]]="activeTab() !== 'info'"
+        class="flex-1 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-2"
+      >
+        <span class="material-symbols-outlined text-base sm:text-lg">person</span>
+        Informations
+      </button>
+      <button
+        (click)="setTab('password')"
+        [class.bg-[#15157D]]="activeTab() === 'password'"
+        [class.text-white]="activeTab() === 'password'"
+        [class.text-[#6B7280]]="activeTab() !== 'password'"
+        class="flex-1 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-2"
+      >
+        <span class="material-symbols-outlined text-base sm:text-lg">lock</span>
+        Mot de passe
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ Contenu ═══ -->
+  @if (loading()) {
+    <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-12 flex flex-col items-center justify-center">
+      <div class="w-10 h-10 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+      <p class="text-[#6B7280] mt-3 text-xs sm:text-sm">Chargement...</p>
+    </div>
+  } @else {
+
+    <!-- ═══ Onglet Informations ═══ -->
+    @if (activeTab() === 'info') {
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4 sm:p-6">
+        <h3 class="text-sm sm:text-base font-semibold text-[#0B1C30] mb-4">Informations personnelles</h3>
+
+        <form (ngSubmit)="onSubmitInfo()">
+          <div class="space-y-4">
+            <!-- Prénom + Nom -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">
+                  Prénom <span class="text-[#BB0013]">*</span>
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="infoForm().first_name"
+                  name="first_name"
+                  (input)="validateInfo()"
+                  class="w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                  [class.border-[#BB0013]]="infoErrors().first_name"
+                  [class.border-[#E5E7EB]]="!infoErrors().first_name"
+                  placeholder="Prénom"
+                />
+                @if (infoErrors().first_name) {
+                  <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">error</span>{{ infoErrors().first_name }}
+                  </p>
+                }
+              </div>
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">
+                  Nom <span class="text-[#BB0013]">*</span>
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="infoForm().last_name"
+                  name="last_name"
+                  (input)="validateInfo()"
+                  class="w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                  [class.border-[#BB0013]]="infoErrors().last_name"
+                  [class.border-[#E5E7EB]]="!infoErrors().last_name"
+                  placeholder="Nom"
+                />
+                @if (infoErrors().last_name) {
+                  <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">error</span>{{ infoErrors().last_name }}
+                  </p>
+                }
+              </div>
+            </div>
+
+            <!-- Email -->
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">
+                Email <span class="text-[#6B7280] text-[10px] font-normal">(optionnel)</span>
+              </label>
+              <input
+                type="email"
+                [(ngModel)]="infoForm().email"
+                name="email"
+                (input)="validateInfo()"
+                class="w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                [class.border-[#BB0013]]="infoErrors().email"
+                [class.border-[#E5E7EB]]="!infoErrors().email"
+                placeholder="email@exemple.com"
+              />
+              @if (infoErrors().email) {
+                <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">error</span>{{ infoErrors().email }}
+                </p>
+              }
+            </div>
+
+            <!-- Téléphone -->
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">Téléphone</label>
+              <input
+                type="text"
+                [(ngModel)]="infoForm().phone"
+                name="phone"
+                (input)="validateInfo()"
+                class="w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                [class.border-[#BB0013]]="infoErrors().phone"
+                [class.border-[#E5E7EB]]="!infoErrors().phone"
+                placeholder="699999999"
+              />
+              @if (infoErrors().phone) {
+                <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">error</span>{{ infoErrors().phone }}
+                </p>
+              }
+            </div>
+
+            <!-- Infos non modifiables -->
+            <div class="bg-[#F5F7FA] rounded-xl p-3 sm:p-4 space-y-2 text-xs sm:text-sm">
+              <div class="flex justify-between">
+                <span class="text-[#6B7280]">Nom d'utilisateur</span>
+                <span class="font-medium text-[#0B1C30] font-mono">{{ currentUser?.username }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-[#6B7280]">Rôle</span>
+                <span class="font-medium text-[#0B1C30]">{{ getRoleLabel(currentUser?.role) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex justify-end mt-5 sm:mt-6 pt-4 border-t border-[#E5E7EB]">
+            <button
+              type="submit"
+              [disabled]="submittingInfo()"
+              class="w-full sm:w-auto px-5 py-2.5 bg-[#15157D] text-white text-xs sm:text-sm font-medium rounded-xl hover:bg-[#2E3192] transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              @if (submittingInfo()) {
+                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Enregistrement...
+              } @else {
+                <span class="material-symbols-outlined text-sm">save</span>
+                Enregistrer
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    }
+
+    <!-- ═══ Onglet Mot de passe ═══ -->
+    @if (activeTab() === 'password') {
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4 sm:p-6">
+        <h3 class="text-sm sm:text-base font-semibold text-[#0B1C30] mb-1">Changer le mot de passe</h3>
+        <p class="text-xs sm:text-sm text-[#6B7280] mb-4">
+          Pour des raisons de sécurité, vous devez entrer votre mot de passe actuel.
+        </p>
+
+        <form (ngSubmit)="onSubmitPassword()">
+          <div class="space-y-4">
+
+            <!-- Mot de passe actuel -->
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">
+                Mot de passe actuel <span class="text-[#BB0013]">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  [type]="showCurrentPassword() ? 'text' : 'password'"
+                  [(ngModel)]="passwordForm().current_password"
+                  name="current_password"
+                  class="w-full px-3 sm:px-4 py-2 sm:py-2.5 pr-10 border rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                  [class.border-[#BB0013]]="passwordErrors().current_password"
+                  [class.border-[#E5E7EB]]="!passwordErrors().current_password"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  (click)="showCurrentPassword.set(!showCurrentPassword())"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#0B1C30]"
+                >
+                  <span class="material-symbols-outlined text-base sm:text-lg">
+                    {{ showCurrentPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+              @if (passwordErrors().current_password) {
+                <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">error</span>{{ passwordErrors().current_password }}
+                </p>
+              }
+            </div>
+
+            <!-- Nouveau mot de passe -->
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">
+                Nouveau mot de passe <span class="text-[#BB0013]">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  [type]="showNewPassword() ? 'text' : 'password'"
+                  [(ngModel)]="passwordForm().password"
+                  name="password"
+                  class="w-full px-3 sm:px-4 py-2 sm:py-2.5 pr-10 border rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                  [class.border-[#BB0013]]="passwordErrors().password"
+                  [class.border-[#E5E7EB]]="!passwordErrors().password"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  (click)="showNewPassword.set(!showNewPassword())"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#0B1C30]"
+                >
+                  <span class="material-symbols-outlined text-base sm:text-lg">
+                    {{ showNewPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+              @if (passwordErrors().password) {
+                <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">error</span>{{ passwordErrors().password }}
+                </p>
+              }
+            </div>
+
+            <!-- Confirmation -->
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">
+                Confirmer le mot de passe <span class="text-[#BB0013]">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  [type]="showConfirmPassword() ? 'text' : 'password'"
+                  [(ngModel)]="passwordForm().password_confirmation"
+                  name="password_confirmation"
+                  class="w-full px-3 sm:px-4 py-2 sm:py-2.5 pr-10 border rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                  [class.border-[#BB0013]]="passwordErrors().password_confirmation"
+                  [class.border-[#E5E7EB]]="!passwordErrors().password_confirmation"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  (click)="showConfirmPassword.set(!showConfirmPassword())"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#0B1C30]"
+                >
+                  <span class="material-symbols-outlined text-base sm:text-lg">
+                    {{ showConfirmPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+              @if (passwordErrors().password_confirmation) {
+                <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">error</span>{{ passwordErrors().password_confirmation }}
+                </p>
+              }
+            </div>
+
+            <!-- Note de sécurité -->
+            <div class="bg-[#EFF4FF] border border-[#C7C5D4] rounded-xl p-3 flex items-start gap-2">
+              <span class="material-symbols-outlined text-[#BB0013] text-base">info</span>
+              <p class="text-[10px] sm:text-xs text-[#464652] leading-relaxed">
+                <strong>Sécurité :</strong> utilisez un mot de passe d'au moins 6 caractères. Ne partagez jamais votre mot de passe.
+              </p>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex justify-end mt-5 sm:mt-6 pt-4 border-t border-[#E5E7EB]">
+            <button
+              type="submit"
+              [disabled]="submittingPassword()"
+              class="w-full sm:w-auto px-5 py-2.5 bg-[#15157D] text-white text-xs sm:text-sm font-medium rounded-xl hover:bg-[#2E3192] transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              @if (submittingPassword()) {
+                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Modification...
+              } @else {
+                <span class="material-symbols-outlined text-sm">lock_reset</span>
+                Changer le mot de passe
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    }
+  }
+</div>

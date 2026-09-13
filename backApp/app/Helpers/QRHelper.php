@@ -73,17 +73,34 @@ if (!function_exists('generateRegistrationQRData')) {
 
         return generateSecureQRData('registration', $data);
     }
-    if (!function_exists('generatePaymentQRData')) {
+ if (!function_exists('generatePaymentQRData')) {
     function generatePaymentQRData($payment, $student, $registration)
     {
+        // ✅ Charger la scolarité pour figer les montants AU MOMENT du reçu
+        $scolarity = $registration->scolarity;
+
         $data = [
-            'type' => 'payment_receipt',
-            'reference' => $payment->reference,
-            'matricule' => $student->registration_number,
-            'name' => $student->first_name . ' ' . $student->last_name,
-            'amount' => $payment->amount,
-            'payment_date' => $payment->payment_date->format('d/m/Y'),
+            // Identifiants (pour la vérification en BD)
+            'payment_id'      => $payment->id,
+            'reference'       => $payment->reference,
             'registration_id' => $registration->id,
+            'matricule'       => $student->registration_number,
+            'name'            => $student->first_name . ' ' . $student->last_name,
+
+            // ✅ INFOS FIGÉES au moment T
+            'payment_amount'   => (float) $payment->amount,
+            'payment_date'     => $payment->payment_date->format('d/m/Y'),
+
+            'tuition_fees_at_payment'  => (float) (
+                $registration->custom_tuition
+                ?? $scolarity?->tuition_fees
+                ?? $registration->formation->tuition_fees
+                ?? 0
+            ),
+            'amount_paid_at_payment'   => (float) ($scolarity?->amount_paid ?? 0),
+            'balance_at_payment'       => (float) ($scolarity?->balance ?? 0),
+            'status_at_payment'        => $scolarity?->status ?? 'unpaid',
+            'formation_name'           => $registration->formation->name ?? '',
         ];
 
         return generateSecureQRData('payment', $data);

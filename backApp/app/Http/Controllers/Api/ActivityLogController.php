@@ -9,41 +9,76 @@ use Illuminate\Http\Request;
 class ActivityLogController extends Controller
 {
     /**
-     * Liste paginée des logs d'activité.
-     * Route : GET /api/activity-logs
+     * Liste paginée des logs d'activité avec filtre de période.
+     * Route : GET /api/v1/activity-logs
      */
     public function index(Request $request)
     {
         $user = $request->user();
 
-        // Vérification des droits (seuls les admins peuvent voir les logs)
+        // Vérification des droits
         if (!in_array($user->role, ['super_admin', 'admin_global', 'admin_campus'])) {
             return response()->json(['message' => 'Accès non autorisé'], 403);
         }
 
-        $query = ActivityLog::with(['user', 'campus'])
-            ->orderBy('created_at', 'desc');
+        // ✅ 1. Résolution de la période (par défaut : aujourd'hui)
+        $period = $request->get('period', 'today');
+        [$dateFrom, $dateTo] = $this->resolvePeriod($period, $request);
 
-        // Restriction campus pour admin_campus
+        $query = ActivityLog::with([
+            'user:id,first_name,last_name,email,role',
+            'campus:id,name',
+        ])->orderBy('created_at', 'desc');
+
+        // ✅ 2. Scope par rôle
         if ($user->role === 'admin_campus') {
             $query->where('campus_id', $user->campus_id);
         }
 
-        // Filtres optionnels
-        if ($request->has('campus_id')) {
+        // ✅ 3. Filtre période (le cœur du fix)
+        if ($dateFrom) $query->whereDate('created_at', '>=', $dateFrom);
+        if ($dateTo)   $query->whereDate('created_at', '<=', $dateTo);
+
+        // ✅ 4. Filtres classiques
+        if ($request->filled('campus_id') && in_array($user->role, ['super_admin', 'admin_global'])) {
             $query->where('campus_id', $request->campus_id);
         }
-        if ($request->has('target_type')) {
-            $query->where('target_type', $request->target_type);
-        }
-        if ($request->has('action')) {
-            $query->where('action', $request->action);
-        }
-        if ($request->has('user_id')) {
-            $query->where('user_id', $request->user_id);
-        }
+        if ($request->filled('user_id'))     $query->where('user_id', $request->user_id);
+        if ($request->filled('action'))      $query->where('action', $request->action);
+        if ($request->filled('target_type')) $query->where('target_type', $request->target_type);
 
-        // Pagination Laravel standard (retourne { data: [...], current_page: ..., total: ..., ... })
-        return response()->json($query->paginate($request->integer('per_page', 30)));
+        // ✅ 5. Stats de la période
+        $totalCount = (clone $query)->count();
+
+        return response()->json([
+            'data' => $query->paginate($request->integer('per_page', 30)),
+            'meta' => [
+                'period'      => $period,
+                'date_from'   => $dateFrom,
+                'date_to'     => $dateTo,
+                'total_count' => $totalCount,
+            ],
+        ]);
+    }
+
+    /**
+     * ✅ Résout la période demandée en [dateFrom, dateTo]
+     */
+    private function resolvePeriod(string $period, Request $request): array
+    {
+        $today = now()->toDateString();
+
+        return match ($period) {
+            'today'  => [$today, $today],
+            'week'   => [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString()],
+            'month'  => [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()],
+            'year'   => [now()->startOfYear()->toDateString(), now()->endOfYear()->toDateString()],
+            'custom' => [
+                $request->filled('date_from') ? $request->date('date_from')?->toDateString() : null,
+                $request->filled('date_to')   ? $request->date('date_to')?->toDateString()   : null,
+            ],
+            'all'    => [null, null],
+            default  => [$today, $today],
+        };
     }
 }

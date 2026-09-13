@@ -4,24 +4,34 @@ use App\Http\Controllers\Api\AcademicYearController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CampusController;
 use App\Http\Controllers\Api\FormationController;
-// use App\Http\Controllers\Api\LogController; // ← Tu peux supprimer cette ligne si ce contrôleur est remplacé
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\RegistrationController;
 use App\Http\Controllers\Api\UserController;
-use App\Http\Controllers\Api\PaymentController;          // ← AJOUTÉ
-use App\Http\Controllers\Api\ActivityLogController;     // ← AJOUTÉ
-use App\Http\Controllers\Api\ExpenseController;
+use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\StudentController;
+use App\Http\Controllers\Api\CashMovementController;
+use App\Http\Controllers\Api\FinancialMovementController;
+use App\Http\Controllers\Api\AttestationController;
+use App\Http\Controllers\Api\ProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+// ═══════════════════════════════════════════════════════════
+// ROUTE USER (auth)
+// ═══════════════════════════════════════════════════════════
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+// ═══════════════════════════════════════════════════════════
+// API v1
+// ═══════════════════════════════════════════════════════════
 Route::prefix('v1')->group(function () {
 
-    // === BROADCASTING AUTH (Pusher) ===
+    // ─────────────────────────────────────────────────────
+    // BROADCASTING AUTH (Pusher)
+    // ─────────────────────────────────────────────────────
     Route::post('/broadcasting/auth', function (Request $request) {
         $user = $request->user();
         if (!$user) {
@@ -52,18 +62,31 @@ Route::prefix('v1')->group(function () {
         );
     })->middleware('auth:sanctum');
 
-    // === PUBLIC ===
+    // ─────────────────────────────────────────────────────
+    // ROUTES PUBLIQUES
+    // ─────────────────────────────────────────────────────
     Route::post('/auth/login', [AuthController::class, 'login']);
-    Route::get('/dashboard/stats', [App\Http\Controllers\Api\DashboardController::class, 'getStats']);
 
-    // === PROTÉGÉES ===
+    // ─────────────────────────────────────────────────────
+    // ROUTES PROTÉGÉES
+    // ─────────────────────────────────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
 
-        // Auth
-        Route::post('/auth/logout', [AuthController::class, 'logout']);
-        Route::get('/auth/user', [AuthController::class, 'user']);
+        Route::prefix('profile')->group(function () {
+        Route::get('/',              [ProfileController::class, 'show']);
+        Route::put('/',              [ProfileController::class, 'update']);
+        Route::patch('/password',    [ProfileController::class, 'updatePassword']);
+    });
 
-        // Utilisateurs
+        // ═══ AUTH ═══
+        Route::post('/auth/logout', [AuthController::class, 'logout']);
+        Route::get('/auth/me', [AuthController::class, 'me']);
+            Route::get('/dashboard/stats', [App\Http\Controllers\Api\DashboardController::class, 'getStats']);
+
+
+        // ═══════════════════════════════════════════════════
+        // ═══ UTILISATEURS ═══
+        // ═══════════════════════════════════════════════════
         Route::middleware('role:super_admin,admin_global,admin_campus')->group(function () {
             Route::get('/users', [UserController::class, 'index']);
             Route::post('/users', [UserController::class, 'store']);
@@ -72,7 +95,24 @@ Route::prefix('v1')->group(function () {
             Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
         });
 
-        // Campus
+
+        // Dans le groupe auth:sanctum
+        Route::prefix('attestations')->group(function () {
+            // ✅ Routes statiques d'abord
+            Route::get('/search-students', [AttestationController::class, 'searchStudents']);
+            Route::get('/stats',           [AttestationController::class, 'stats']);
+
+            // Routes dynamiques
+            Route::get('/',                [AttestationController::class, 'index']);
+            Route::post('/',               [AttestationController::class, 'store']);
+            Route::patch('/{id}/settle',   [AttestationController::class, 'settle']);
+            Route::patch('/{id}/unsettle', [AttestationController::class, 'unsettle']);
+            Route::delete('/{id}',         [AttestationController::class, 'cancel']);
+        });
+
+        // ═══════════════════════════════════════════════════
+        // ═══ CAMPUS ═══
+        // ═══════════════════════════════════════════════════
         Route::middleware('campus.access')->group(function () {
             Route::get('/campuses', [CampusController::class, 'index']);
             Route::get('/campuses/{id}', [CampusController::class, 'show']);
@@ -82,7 +122,9 @@ Route::prefix('v1')->group(function () {
             Route::patch('/campuses/{id}/toggle-status', [CampusController::class, 'toggleStatus']);
         });
 
-        // Années scolaires
+        // ═══════════════════════════════════════════════════
+        // ═══ ANNÉES SCOLAIRES ═══
+        // ═══════════════════════════════════════════════════
         Route::get('/academic-years', [AcademicYearController::class, 'index']);
         Route::get('/academic-years/{id}', [AcademicYearController::class, 'show']);
         Route::patch('/academic-years/switch', [AcademicYearController::class, 'switchYear']);
@@ -93,7 +135,9 @@ Route::prefix('v1')->group(function () {
             Route::delete('/academic-years/{id}', [AcademicYearController::class, 'destroy']);
         });
 
-        // Formations
+        // ═══════════════════════════════════════════════════
+        // ═══ FORMATIONS ═══
+        // ═══════════════════════════════════════════════════
         Route::get('/formations', [FormationController::class, 'index']);
         Route::get('/formations/{id}', [FormationController::class, 'show']);
 
@@ -104,62 +148,74 @@ Route::prefix('v1')->group(function () {
             Route::patch('/formations/{id}/toggle-status', [FormationController::class, 'toggleStatus']);
         });
 
-        // ═══ INSCRIPTIONS (CRUD nettoyé) ═══
-        // Note : updateAmount et logs/all ont été retirés car déplacés vers leurs contrôleurs dédiés
+        // ═══════════════════════════════════════════════════
+        // ═══ INSCRIPTIONS ═══
+        // ═══════════════════════════════════════════════════
         Route::get('/registrations', [RegistrationController::class, 'index']);
         Route::get('/registrations/{id}', [RegistrationController::class, 'show']);
         Route::post('/registrations', [RegistrationController::class, 'store']);
-         Route::delete('/registrations/{id}', [RegistrationController::class, 'destroy']);
-         Route::get('/registrations/{id}/form', [RegistrationController::class, 'generateForm']);
+        Route::delete('/registrations/{id}', [RegistrationController::class, 'destroy']);
+        Route::get('/registrations/{id}/form', [RegistrationController::class, 'generateForm']);
         Route::get('/registrations/stats/{campusId}', [RegistrationController::class, 'stats']);
 
+        // ═══════════════════════════════════════════════════
+        // ═══ PAIEMENTS ═══
+        // ═══════════════════════════════════════════════════
         Route::get('/payments', [PaymentController::class, 'index']);
         Route::get('/payments/search', [PaymentController::class, 'searchStudents']);
         Route::get('/payments/{id}/receipt', [PaymentController::class, 'generateReceipt']);
+        Route::delete('/payments/{id}', [PaymentController::class, 'destroy']);
 
-        // ═══ PAIEMENTS (Nouveau contrôleur dédié) ═══
-        // Ajouter un nouveau versement à une inscription
+        // Ajouter un versement à une inscription
         Route::post('/registrations/{registrationId}/payments', [PaymentController::class, 'store']);
-        
-        // Modifier, supprimer (soft delete) ou restaurer un paiement existant
-         Route::delete('/payments/{id}', [PaymentController::class, 'destroy']);
- 
-        // ═══ LOGS D'ACTIVITÉ (Contrôleur dédié en lecture seule) ═══
-        Route::middleware('role:super_admin,admin_global,admin_campus')->group(function () {
-            Route::get('/activity-logs', [ActivityLogController::class, 'index']);
-        });
 
-        // (Optionnel) Si l'ancien LogController ne sert plus à rien, tu peux supprimer cette ligne :
-        // Route::get('/logs', [LogController::class, 'index']);
-
-        // === NOTIFICATIONS ===
-        Route::get('/notifications', [NotificationController::class, 'index']);
-        Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
-        Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
-
- 
-                // ═══ ÉTUDIANTS (Lecture + Modification infos personnelles uniquement) ═══
-    
+        // ═══════════════════════════════════════════════════
+        // ═══ ÉTUDIANTS ═══
+        // ═══════════════════════════════════════════════════
+        // Rapports (avant /{id} pour éviter conflit)
         Route::get('/students/scholarship-report', [StudentController::class, 'scholarshipReport']);
         Route::get('/students/scholarship-report/pdf', [StudentController::class, 'generateScholarshipReport']);
         Route::get('/students/simple-list', [StudentController::class, 'simpleList']);
         Route::get('/students/simple-list/pdf', [StudentController::class, 'generateSimpleList']);
-        
-        
-            Route::get('/students', [StudentController::class, 'index']);
+
+        // CRUD étudiants
+        Route::get('/students', [StudentController::class, 'index']);
         Route::get('/students/{id}', [StudentController::class, 'show']);
         Route::put('/students/{id}', [StudentController::class, 'update']);
         Route::get('/students/{id}/photo', [StudentController::class, 'getPhoto']);
-                // ═══ RAPPORTS ÉTUDIANTS ═══
 
-                // ═══ DÉPENSES ═══
-        Route::get('/expenses', [ExpenseController::class, 'index']);
-        Route::get('/expenses/summary', [ExpenseController::class, 'summary']);
-        Route::post('/expenses', [ExpenseController::class, 'store']);
-        Route::delete('/expenses/{id}', [ExpenseController::class, 'destroy']);
+        // ═══════════════════════════════════════════════════
+        // ═══ LOGS D'ACTIVITÉ ═══
+        // ═══════════════════════════════════════════════════
+        Route::middleware('role:super_admin,admin_global,admin_campus')->group(function () {
+            Route::get('/activity-logs', [ActivityLogController::class, 'index']);
+        });
 
-                // ═══ MOUVEMENTS FINANCIERS (Bilan comptable) ═══
-        Route::get('/financial-movements', [App\Http\Controllers\Api\FinancialMovementController::class, 'index']);
-        Route::get('/financial-movements/report', [App\Http\Controllers\Api\FinancialMovementController::class, 'generateReport']);
+        // ═══════════════════════════════════════════════════
+        // ═══ NOTIFICATIONS ═══
+        // ═══════════════════════════════════════════════════
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+
+        // ═══════════════════════════════════════════════════
+        // ═══ CAISSE (Cash Movements) ═══
+        // ═══════════════════════════════════════════════════
+        Route::prefix('cash-movements')->group(function () {
+            // ⚠️ Routes statiques AVANT /{id}
+            Route::get('/summary',    [CashMovementController::class, 'summary']);
+            Route::get('/categories', [CashMovementController::class, 'categories']);
+
+            Route::get('/',           [CashMovementController::class, 'index']);
+            Route::post('/',          [CashMovementController::class, 'store']);
+            Route::delete('/{id}',    [CashMovementController::class, 'destroy']);
+            Route::get('/{id}/attachment', [CashMovementController::class, 'downloadAttachment']);
+        });
+
+        // ═══════════════════════════════════════════════════
+        // ═══ MOUVEMENTS FINANCIERS (Bilan scolarité) ═══
+        // ═══════════════════════════════════════════════════
+        Route::get('/financial-movements',        [FinancialMovementController::class, 'index']);
+        Route::get('/financial-movements/report', [FinancialMovementController::class, 'generateReport']);
     });
 });

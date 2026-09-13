@@ -1,67 +1,78 @@
-<div>
+<div class="p-3 sm:p-6">
 
-  <!-- Header -->
-  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-    <div>
-      <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
-        <span class="material-symbols-outlined text-[#15157D] text-3xl">admin_panel_settings</span>
+  <!-- ═══ Header ═══ -->
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
+    <div class="min-w-0">
+      <h1 class="text-xl sm:text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#15157D] text-2xl sm:text-3xl">admin_panel_settings</span>
         Gestion des Utilisateurs
       </h1>
-      <p class="text-[#6B7280] text-sm mt-1">Gérez les accès des utilisateurs du système</p>
+      <p class="text-[#6B7280] text-xs sm:text-sm mt-1">Gérez les accès des utilisateurs du système</p>
     </div>
-    <button (click)="openCreateModal()" class="bg-[#15157D] text-white px-5 py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm">
-      <span class="material-symbols-outlined text-lg">person_add</span>
+    <button
+      (click)="openCreateModal()"
+      class="bg-[#15157D] text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 font-medium text-xs sm:text-sm w-full sm:w-auto"
+    >
+      <span class="material-symbols-outlined text-base sm:text-lg">person_add</span>
       Nouvel utilisateur
     </button>
   </div>
 
-  <!-- Recherche -->
+  <!-- ═══ Recherche ═══ -->
+  <div class="relative mb-3 sm:mb-4">
+    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] text-lg">search</span>
     <input
-    type="text"
-    [value]="searchTerm()"
-(input)="searchTerm.set($any($event.target).value)"    (keyup.enter)="onSearch()"
-    class="w-full pl-10 pr-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all text-sm"
-    placeholder="Rechercher un utilisateur..."
-  />
+      type="text"
+      [value]="searchTerm()"
+      (input)="searchTerm.set($any($event.target).value)"
+      (keyup.enter)="onSearch()"
+      class="w-full pl-10 pr-4 py-2 sm:py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all text-sm"
+      placeholder="Rechercher un utilisateur..."
+    />
+  </div>
 
-  <!-- Loader -->
+  <!-- ═══ Loader ═══ -->
   @if (loading()) {
-    <div class="flex flex-col items-center justify-center py-20">
-      <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
-      <p class="text-[#6B7280] mt-4 text-sm">Chargement...</p>
+    <div class="flex flex-col items-center justify-center py-16 sm:py-20">
+      <div class="w-10 h-10 sm:w-12 sm:h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+      <p class="text-[#6B7280] mt-3 sm:mt-4 text-xs sm:text-sm">Chargement...</p>
     </div>
   } @else {
     <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="w-full min-w-[700px]">
           <thead>
             <tr class="bg-[#F5F7FA] border-b border-[#E5E7EB]">
-              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Utilisateur</th>
-              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Email</th>
-              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Rôle</th>
-              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Campus</th>
-              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Statut</th>
-              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Actions</th>
+              <th class="text-left px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Utilisateur</th>
+              <th class="text-left px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Email</th>
+              <th class="text-left px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Identifiant</th>
+              <th class="text-left px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Rôle</th>
+              <th class="text-left px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Campus</th>
+              <th class="text-left px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Statut</th>
+              <th class="text-right px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-[#E5E7EB]">
             @for (user of users(); track user.id) {
               <tr class="hover:bg-[#F5F7FA] transition-colors">
-                <td class="px-6 py-4">
-                  <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-full bg-[#E8F0FE] flex items-center justify-center text-[#15157D] font-bold text-sm">
+                <td class="px-4 sm:px-6 py-3 sm:py-4">
+                  <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#E8F0FE] flex items-center justify-center text-[#15157D] font-bold text-xs sm:text-sm flex-shrink-0">
                       {{ user.first_name[0] }}{{ user.last_name[0] }}
                     </div>
-                    <div>
-                      <p class="font-medium text-[#0B1C30]">{{ user.first_name }} {{ user.last_name }}</p>
+                    <div class="min-w-0">
+                      <p class="font-medium text-[#0B1C30] text-sm truncate">
+                        {{ user.last_name }} {{ user.first_name }}
+                      </p>
                       @if (user.phone) {
-                        <p class="text-xs text-[#6B7280]">{{ user.phone }}</p>
+                        <p class="text-[10px] sm:text-xs text-[#6B7280] truncate">{{ user.phone }}</p>
                       }
                     </div>
                   </div>
                 </td>
-                <td class="px-6 py-4 text-[#6B7280] text-sm">{{ user.email }}</td>
-                <td class="px-6 py-4">
+                <td class="px-4 sm:px-6 py-3 sm:py-4 text-[#6B7280] text-xs sm:text-sm truncate max-w-[180px]">{{ user.email }}</td>
+                <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-mono text-[#15157D]">{{ user.username || '-' }}</td>
+                <td class="px-4 sm:px-6 py-3 sm:py-4">
                   <span
                     [class.bg-[#E8F0FE]]="user.role === 'super_admin'"
                     [class.text-[#15157D]]="user.role === 'super_admin'"
@@ -71,45 +82,62 @@
                     [class.text-[#00497C]]="user.role === 'admin_campus'"
                     [class.bg-[#EFF4FF]]="user.role === 'secretary'"
                     [class.text-[#464652]]="user.role === 'secretary'"
-                    class="px-2.5 py-1 rounded-full text-xs font-medium"
+                    class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium whitespace-nowrap"
                   >{{ getRoleLabel(user.role) }}</span>
                 </td>
-                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ user.campus?.name || '-' }}</td>
-                <td class="px-6 py-4">
+                <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-[#6B7280]">{{ user.campus?.name || '-' }}</td>
+                <td class="px-4 sm:px-6 py-3 sm:py-4">
                   <span
                     [class.bg-green-100]="user.is_active"
                     [class.text-green-700]="user.is_active"
                     [class.bg-red-100]="!user.is_active"
                     [class.text-red-700]="!user.is_active"
-                    class="px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1 w-fit"
+                    class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium flex items-center gap-1 w-fit whitespace-nowrap"
                   >
-                    <span class="w-1.5 h-1.5 rounded-full" [class.bg-green-500]="user.is_active" [class.bg-red-500]="!user.is_active"></span>
+                    <span class="w-1.5 h-1.5 rounded-full"
+                      [class.bg-green-500]="user.is_active"
+                      [class.bg-red-500]="!user.is_active"></span>
                     {{ user.is_active ? 'Actif' : 'Inactif' }}
                   </span>
                 </td>
-                <td class="px-6 py-4 text-right">
-                  <div class="flex items-center justify-end gap-0.5">
-                    <button (click)="toggleStatus(user)" [disabled]="togglingId() === user.id" class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#15157D] transition-colors disabled:opacity-50" title="{{ user.is_active ? 'Désactiver' : 'Activer' }}">
+                <td class="px-4 sm:px-6 py-3 sm:py-4 text-right">
+                  <div class="flex items-center justify-end gap-0.5 sm:gap-1">
+                    <button
+                      (click)="toggleStatus(user)"
+                      [disabled]="togglingId() === user.id"
+                      class="p-1.5 sm:p-2 rounded-lg hover:bg-[#E8F0FE] text-[#15157D] transition-colors disabled:opacity-50"
+                      title="{{ user.is_active ? 'Désactiver' : 'Activer' }}"
+                    >
                       @if (togglingId() === user.id) {
-                        <span class="w-5 h-5 border-2 border-[#15157D] border-t-transparent rounded-full animate-spin inline-block"></span>
+                        <span class="w-4 h-4 sm:w-5 sm:h-5 border-2 border-[#15157D] border-t-transparent rounded-full animate-spin inline-block"></span>
                       } @else {
-                        <span class="material-symbols-outlined text-xl">{{ user.is_active ? 'pause_circle' : 'play_circle' }}</span>
+                        <span class="material-symbols-outlined text-lg sm:text-xl">
+                          {{ user.is_active ? 'pause_circle' : 'play_circle' }}
+                        </span>
                       }
                     </button>
-                    <button (click)="openEditModal(user)" class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6C3CE1] transition-colors" title="Modifier">
-                      <span class="material-symbols-outlined text-xl">edit</span>
+                    <button
+                      (click)="openEditModal(user)"
+                      class="p-1.5 sm:p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6C3CE1] transition-colors"
+                      title="Modifier"
+                    >
+                      <span class="material-symbols-outlined text-lg sm:text-xl">edit</span>
                     </button>
-                    <button (click)="openDeleteModal(user)" class="p-2 rounded-lg hover:bg-red-50 text-[#BB0013] transition-colors" title="Supprimer">
-                      <span class="material-symbols-outlined text-xl">delete</span>
+                    <button
+                      (click)="openDeleteModal(user)"
+                      class="p-1.5 sm:p-2 rounded-lg hover:bg-red-50 text-[#BB0013] transition-colors"
+                      title="Supprimer"
+                    >
+                      <span class="material-symbols-outlined text-lg sm:text-xl">delete</span>
                     </button>
                   </div>
                 </td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="6" class="text-center py-12 text-[#6B7280]">
+                <td colspan="7" class="text-center py-12 text-[#6B7280]">
                   <span class="material-symbols-outlined text-5xl text-[#E5E7EB] block mb-3">people</span>
-                  <p>Aucun utilisateur trouvé</p>
+                  <p class="text-sm">Aucun utilisateur trouvé</p>
                 </td>
               </tr>
             }
@@ -119,97 +147,281 @@
 
       <!-- Pagination -->
       @if (meta().last_page > 1) {
-        <div class="flex items-center justify-between px-6 py-4 border-t border-[#E5E7EB]">
-          <p class="text-sm text-[#6B7280]">{{ meta().total }} utilisateur(s) — Page {{ meta().current_page }} / {{ meta().last_page }}</p>
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-[#E5E7EB]">
+          <p class="text-xs sm:text-sm text-[#6B7280]">
+            {{ meta().total }} utilisateur(s) — Page {{ meta().current_page }} / {{ meta().last_page }}
+          </p>
           <div class="flex gap-1">
-            <button (click)="changePage(meta().current_page - 1)" [disabled]="meta().current_page <= 1" class="px-3 py-1.5 text-sm rounded-lg border border-[#E5E7EB] hover:bg-[#F5F7FA] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Précédent</button>
+            <button
+              (click)="changePage(meta().current_page - 1)"
+              [disabled]="meta().current_page <= 1"
+              class="px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg border border-[#E5E7EB] hover:bg-[#F5F7FA] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Précédent
+            </button>
             @for (p of pages(); track p) {
-              <button (click)="changePage(p)" [class]="meta().current_page === p ? 'bg-[#15157D] text-white' : 'border border-[#E5E7EB] hover:bg-[#F5F7FA] text-[#0B1C30]'" class="w-9 h-9 text-sm rounded-lg transition-colors">{{ p }}</button>
+              <button
+                (click)="changePage(p)"
+                [class]="meta().current_page === p ? 'bg-[#15157D] text-white' : 'border border-[#E5E7EB] hover:bg-[#F5F7FA] text-[#0B1C30]'"
+                class="w-8 h-8 sm:w-9 sm:h-9 text-xs sm:text-sm rounded-lg transition-colors"
+              >
+                {{ p }}
+              </button>
             }
-            <button (click)="changePage(meta().current_page + 1)" [disabled]="meta().current_page >= meta().last_page" class="px-3 py-1.5 text-sm rounded-lg border border-[#E5E7EB] hover:bg-[#F5F7FA] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Suivant</button>
+            <button
+              (click)="changePage(meta().current_page + 1)"
+              [disabled]="meta().current_page >= meta().last_page"
+              class="px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg border border-[#E5E7EB] hover:bg-[#F5F7FA] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Suivant
+            </button>
           </div>
         </div>
       }
     </div>
   }
 
-  <!-- Modal suppression -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL SUPPRESSION -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
   @if (showDeleteModal()) {
-    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" (click)="closeDeleteModal()">
-      <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl" (click)="$event.stopPropagation()">
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+      (click)="closeDeleteModal()">
+      <div class="bg-white rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl animate-slide-up max-h-[90vh] overflow-y-auto"
+        (click)="$event.stopPropagation()">
+
         <div class="flex flex-col items-center text-center">
-          <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-[#BB0013] mb-4">
-            <span class="material-symbols-outlined text-4xl">delete_forever</span>
+          <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-red-100 flex items-center justify-center text-[#BB0013] mb-3 sm:mb-4">
+            <span class="material-symbols-outlined text-3xl sm:text-4xl">delete_forever</span>
           </div>
-          <h2 class="text-xl font-bold text-[#0B1C30]">Confirmer la suppression</h2>
-          <p class="text-[#6B7280] text-sm mt-2">
-            Supprimer <span class="font-semibold text-[#0B1C30]">"{{ userToDelete()?.first_name }} {{ userToDelete()?.last_name }}"</span> ?
+          <h2 class="text-lg sm:text-xl font-bold text-[#0B1C30]">Confirmer la suppression</h2>
+          <p class="text-[#6B7280] text-xs sm:text-sm mt-2">
+            Supprimer <span class="font-semibold text-[#0B1C30]">"{{ userToDelete()?.last_name }} {{ userToDelete()?.first_name }}"</span> ?
           </p>
         </div>
-        <div class="flex gap-3 justify-center mt-6 pt-4 border-t border-[#E5E7EB]">
-          <button (click)="closeDeleteModal()" class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">Annuler</button>
-          <button (click)="confirmDelete()" [disabled]="submitting()" class="px-5 py-2.5 bg-[#BB0013] text-white text-sm font-medium rounded-xl hover:bg-[#93000D] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-            @if (submitting()) { <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Suppression... }
-            @else { <span class="material-symbols-outlined text-sm">delete</span> Supprimer }
+
+        <div class="flex gap-2 sm:gap-3 justify-center mt-5 sm:mt-6 pt-4 border-t border-[#E5E7EB]">
+          <button
+            (click)="closeDeleteModal()"
+            class="flex-1 px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors"
+          >
+            Annuler
+          </button>
+          <button
+            (click)="confirmDelete()"
+            [disabled]="submitting()"
+            class="flex-1 px-4 sm:px-5 py-2.5 bg-[#BB0013] text-white text-xs sm:text-sm font-medium rounded-xl hover:bg-[#93000D] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            @if (submitting()) {
+              <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              Suppression...
+            } @else {
+              <span class="material-symbols-outlined text-sm">delete</span>
+              Supprimer
+            }
           </button>
         </div>
       </div>
     </div>
   }
 
-  <!-- Modal formulaire -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL FORMULAIRE -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
   @if (showModal()) {
-    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" (click)="closeModal()">
-      <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
-        <div class="flex items-center justify-between mb-6">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
-              <span class="material-symbols-outlined text-2xl">{{ isEditing() ? 'edit' : 'person_add' }}</span>
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+      (click)="closeModal()">
+      <div class="bg-white rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up"
+        (click)="$event.stopPropagation()">
+
+        <!-- Header modal -->
+        <div class="flex items-center justify-between mb-5 sm:mb-6">
+          <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D] flex-shrink-0">
+              <span class="material-symbols-outlined text-xl sm:text-2xl">
+                {{ isEditing() ? 'edit' : 'person_add' }}
+              </span>
             </div>
-            <div>
-              <h2 class="text-xl font-bold text-[#0B1C30]">{{ isEditing() ? "Modifier l'utilisateur" : 'Nouvel utilisateur' }}</h2>
-              <p class="text-sm text-[#6B7280]">{{ isEditing() ? 'Modifiez les informations' : 'Remplissez les informations' }}</p>
+            <div class="min-w-0">
+              <h2 class="text-base sm:text-xl font-bold text-[#0B1C30] truncate">
+                {{ isEditing() ? "Modifier l'utilisateur" : 'Nouvel utilisateur' }}
+              </h2>
+              <p class="text-xs sm:text-sm text-[#6B7280] truncate">
+                {{ isEditing() ? 'Modifiez les informations' : 'Remplissez les informations' }}
+              </p>
             </div>
           </div>
-          <button (click)="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280]"><span class="material-symbols-outlined">close</span></button>
+          <button
+            (click)="closeModal()"
+            class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] flex-shrink-0"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
         </div>
 
         <form (ngSubmit)="onSubmit()">
-          <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-3 sm:space-y-4">
+
+            <!-- Prénom + Nom -->
+            <div class="grid grid-cols-2 gap-2 sm:gap-3">
               <div>
-                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Prénom <span class="text-[#BB0013]">*</span></label>
-                <input type="text" [(ngModel)]="formData().first_name" name="first_name" (blur)="validate()" (input)="validate()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-red-500]="errors().first_name" [class.border-[#E5E7EB]]="!errors().first_name" placeholder="Prénom" />
-                @if (errors().first_name) { <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ errors().first_name }}</p> }
+                <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">
+                  Prénom <span class="text-[#BB0013]">*</span>
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="formData().first_name"
+                  name="first_name"
+                  (blur)="validate()"
+                  (input)="validate()"
+                  class="w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                  [class.border-red-500]="errors().first_name"
+                  [class.border-[#E5E7EB]]="!errors().first_name"
+                  placeholder="Prénom"
+                />
+                @if (errors().first_name) {
+                  <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">error</span>{{ errors().first_name }}
+                  </p>
+                }
               </div>
               <div>
-                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Nom <span class="text-[#BB0013]">*</span></label>
-                <input type="text" [(ngModel)]="formData().last_name" name="last_name" (blur)="validate()" (input)="validate()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-red-500]="errors().last_name" [class.border-[#E5E7EB]]="!errors().last_name" placeholder="Nom" />
-                @if (errors().last_name) { <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ errors().last_name }}</p> }
+                <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">
+                  Nom <span class="text-[#BB0013]">*</span>
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="formData().last_name"
+                  name="last_name"
+                  (blur)="validate()"
+                  (input)="validate()"
+                  class="w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                  [class.border-red-500]="errors().last_name"
+                  [class.border-[#E5E7EB]]="!errors().last_name"
+                  placeholder="Nom"
+                />
+                @if (errors().last_name) {
+                  <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">error</span>{{ errors().last_name }}
+                  </p>
+                }
               </div>
             </div>
 
+            <!-- Email -->
             <div>
-              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Email <span class="text-[#BB0013]">*</span></label>
-              <input type="email" [(ngModel)]="formData().email" name="email" (blur)="validate()" (input)="validate()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-red-500]="errors().email" [class.border-[#E5E7EB]]="!errors().email" placeholder="email@exemple.com" />
-              @if (errors().email) { <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ errors().email }}</p> }
+              <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">
+                Email <span class="text-[#6B7280] text-[10px] font-normal">(optionnel)</span>
+              </label>
+              <input
+                type="email"
+                [(ngModel)]="formData().email"
+                name="email"
+                (blur)="validate()"
+                (input)="validate()"
+                class="w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                [class.border-red-500]="errors().email"
+                [class.border-[#E5E7EB]]="!errors().email"
+                placeholder="email@exemple.com (optionnel)"
+              />
+              @if (errors().email) {
+                <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">error</span>{{ errors().email }}
+                </p>
+              }
             </div>
 
+            <!-- Nom d'utilisateur -->
             <div>
-              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Téléphone</label>
-              <input type="text" [(ngModel)]="formData().phone" name="phone" (blur)="validate()" (input)="validate()" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" placeholder="699999999" />
-              @if (errors().phone) { <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ errors().phone }}</p> }
+              <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">Nom d'utilisateur</label>
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  [(ngModel)]="formData().username"
+                  name="username"
+                  (blur)="validate()"
+                  (input)="validate()"
+                  class="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 border rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all lowercase"
+                  [class.border-red-500]="errors().username"
+                  [class.border-[#E5E7EB]]="!errors().username"
+                  placeholder="prenom.nom"
+                />
+                @if (!isEditing()) {
+                  <button
+                    type="button"
+                    (click)="generateUsername()"
+                    class="px-2 sm:px-3 py-2 sm:py-2.5 bg-[#E8F0FE] text-[#15157D] rounded-xl hover:bg-[#D1E4FF] transition-colors flex items-center gap-1 text-xs font-medium whitespace-nowrap"
+                    title="Générer automatiquement"
+                  >
+                    <span class="material-symbols-outlined text-sm">auto_awesome</span>
+                    <span class="hidden xs:inline">Générer</span>
+                  </button>
+                }
+              </div>
+              @if (errors().username) {
+                <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">error</span>{{ errors().username }}
+                </p>
+              }
+              <p class="text-[10px] text-[#6B7280] mt-1">
+                {{ isEditing() ? 'Peut être modifié.' : 'Si laissé vide, un identifiant unique sera généré.' }}
+              </p>
             </div>
 
+            <!-- Téléphone -->
             <div>
-              <label class="block text-sm font-medium text-[#0B1C30] mb-1">{{ isEditing() ? 'Nouveau mot de passe' : 'Mot de passe' }} @if (!isEditing()) { <span class="text-[#BB0013]">*</span> }</label>
-              <input type="password" [(ngModel)]="formData().password" name="password" (blur)="validate()" (input)="validate()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" [class.border-red-500]="errors().password" [class.border-[#E5E7EB]]="!errors().password" placeholder="{{ isEditing() ? 'Laisser vide pour ne pas changer' : 'Mot de passe' }}" />
-              @if (errors().password) { <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ errors().password }}</p> }
+              <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">Téléphone</label>
+              <input
+                type="text"
+                [(ngModel)]="formData().phone"
+                name="phone"
+                (blur)="validate()"
+                (input)="validate()"
+                class="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-[#E5E7EB] rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                placeholder="699999999"
+              />
+              @if (errors().phone) {
+                <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">error</span>{{ errors().phone }}
+                </p>
+              }
             </div>
 
+            <!-- Mot de passe -->
             <div>
-              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Rôle <span class="text-[#BB0013]">*</span></label>
-              <select [(ngModel)]="formData().role" name="role" (change)="validate()" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none appearance-none bg-white">
+              <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">
+                {{ isEditing() ? 'Nouveau mot de passe' : 'Mot de passe' }}
+                @if (!isEditing()) { <span class="text-[#BB0013]">*</span> }
+              </label>
+              <input
+                type="password"
+                [(ngModel)]="formData().password"
+                name="password"
+                (blur)="validate()"
+                (input)="validate()"
+                class="w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all"
+                [class.border-red-500]="errors().password"
+                [class.border-[#E5E7EB]]="!errors().password"
+                placeholder="{{ isEditing() ? 'Laisser vide pour ne pas changer' : 'Mot de passe' }}"
+              />
+              @if (errors().password) {
+                <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">error</span>{{ errors().password }}
+                </p>
+              }
+            </div>
+
+            <!-- Rôle -->
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">
+                Rôle <span class="text-[#BB0013]">*</span>
+              </label>
+              <select
+                [(ngModel)]="formData().role"
+                name="role"
+                (change)="validate()"
+                class="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-[#E5E7EB] rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none appearance-none bg-white"
+              >
                 @if (isEditing() && selectedUser() && !availableRoles().some(r => r.value === formData().role)) {
                   <option [value]="formData().role">{{ getRoleLabel(formData().role) }} (actuel)</option>
                 }
@@ -219,25 +431,55 @@
               </select>
             </div>
 
+            <!-- Campus (conditionnel) -->
             @if (['admin_campus', 'secretary'].includes(formData().role)) {
               <div>
-                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Campus <span class="text-[#BB0013]">*</span></label>
-                <select [(ngModel)]="formData().campus_id" name="campus_id" (change)="validate()" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none appearance-none bg-white" [class.border-red-500]="errors().campus_id" [class.border-[#E5E7EB]]="!errors().campus_id">
+                <label class="block text-xs sm:text-sm font-medium text-[#0B1C30] mb-1">
+                  Campus <span class="text-[#BB0013]">*</span>
+                </label>
+                <select
+                  [(ngModel)]="formData().campus_id"
+                  name="campus_id"
+                  (change)="validate()"
+                  class="w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-xl text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none appearance-none bg-white"
+                  [class.border-red-500]="errors().campus_id"
+                  [class.border-[#E5E7EB]]="!errors().campus_id"
+                >
                   <option [value]="null">Sélectionner un campus</option>
                   @for (campus of campuses(); track campus.id) {
                     <option [value]="campus.id">{{ campus.name }}</option>
                   }
                 </select>
-                @if (errors().campus_id) { <p class="text-sm text-[#BB0013] mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">error</span>{{ errors().campus_id }}</p> }
+                @if (errors().campus_id) {
+                  <p class="text-xs sm:text-sm text-[#BB0013] mt-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">error</span>{{ errors().campus_id }}
+                  </p>
+                }
               </div>
             }
           </div>
 
-          <div class="flex gap-3 justify-end mt-6 pt-4 border-t border-[#E5E7EB]">
-            <button type="button" (click)="closeModal()" class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">Annuler</button>
-            <button type="submit" [disabled]="submitting()" class="px-5 py-2.5 bg-[#15157D] text-white text-sm font-medium rounded-xl hover:bg-[#2E3192] transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-              @if (submitting()) { <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> {{ isEditing() ? 'Modification...' : 'Création...' }} }
-              @else { <span class="material-symbols-outlined text-sm">{{ isEditing() ? 'save' : 'add' }}</span> {{ isEditing() ? 'Modifier' : 'Créer' }} }
+          <!-- Actions -->
+          <div class="flex gap-2 sm:gap-3 justify-end mt-5 sm:mt-6 pt-4 border-t border-[#E5E7EB]">
+            <button
+              type="button"
+              (click)="closeModal()"
+              class="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              [disabled]="submitting()"
+              class="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 bg-[#15157D] text-white text-xs sm:text-sm font-medium rounded-xl hover:bg-[#2E3192] transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              @if (submitting()) {
+                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                {{ isEditing() ? 'Modification...' : 'Création...' }}
+              } @else {
+                <span class="material-symbols-outlined text-sm">{{ isEditing() ? 'save' : 'add' }}</span>
+                {{ isEditing() ? 'Modifier' : 'Créer' }}
+              }
             </button>
           </div>
         </form>

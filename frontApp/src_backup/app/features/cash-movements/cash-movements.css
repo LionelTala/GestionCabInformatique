@@ -1,0 +1,4 @@
+/* src/app/features/cash-movements/cash-movements.component.css */
+:host {
+  display: block;
+}

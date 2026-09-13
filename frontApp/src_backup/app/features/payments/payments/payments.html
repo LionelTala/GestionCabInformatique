@@ -1,0 +1,393 @@
+<div class="p-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 animate-fade-in-up" style="animation-delay: 0.1s;">
+    <div>
+      <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#15157D] text-3xl">payments</span>
+        Gestion des Paiements
+      </h1>
+      <p class="text-[#6B7280] text-sm mt-1">Enregistrez les versements et téléchargez les reçus</p>
+    </div>
+    <button (click)="openModal()"
+      class="bg-[#15157D] text-white px-5 py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm whitespace-nowrap">
+      <span class="material-symbols-outlined text-lg">add</span>
+      Nouveau paiement
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="flex flex-col items-center justify-center py-20">
+      <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+      <p class="text-[#6B7280] mt-4 text-sm">Chargement des paiements...</p>
+    </div>
+  } @else {
+
+    <!-- KPIs période -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4">
+        <p class="text-xs font-medium text-[#6B7280] mb-1">Total encaissé ({{ getPeriodLabel() }})</p>
+        <p class="text-2xl font-bold text-green-700">{{ formatPrice(periodMeta().total_amount || 0) }}</p>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4">
+        <p class="text-xs font-medium text-[#6B7280] mb-1">Nombre de paiements</p>
+        <p class="text-2xl font-bold text-[#15157D]">{{ periodMeta().total_count || 0 }}</p>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4">
+        <p class="text-xs font-medium text-[#6B7280] mb-1">Période</p>
+        <p class="text-sm font-semibold text-[#0B1C30]">
+          @if (periodMeta().date_from) {
+            {{ periodMeta().date_from }} → {{ periodMeta().date_to }}
+          } @else {
+            {{ getPeriodLabel() }}
+          }
+        </p>
+      </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4 mb-6">
+      <!-- Chips de période -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        @for (p of [
+          { key: 'today', label: 'Aujourd\'hui', icon: 'today' },
+          { key: 'week', label: 'Cette semaine', icon: 'date_range' },
+          { key: 'month', label: 'Ce mois', icon: 'calendar_month' },
+          { key: 'year', label: 'Cette année', icon: 'calendar_today' },
+          { key: 'custom', label: 'Personnalisé', icon: 'edit_calendar' },
+          { key: 'all', label: 'Tout', icon: 'all_inclusive' }
+        ]; track p.key) {
+          <button (click)="setPeriod($any(p.key))"
+            [class.bg-[#15157D]]="filters().period === p.key"
+            [class.text-white]="filters().period === p.key"
+            [class.bg-white]="filters().period !== p.key"
+            [class.text-[#6B7280]]="filters().period !== p.key"
+            [class.border-[#15157D]]="filters().period === p.key"
+            [class.border-[#E5E7EB]]="filters().period !== p.key"
+            class="px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1 transition-all hover:border-[#15157D]">
+            <span class="material-symbols-outlined text-sm">{{ p.icon }}</span>
+            {{ p.label }}
+          </button>
+        }
+      </div>
+
+      <!-- Dates custom -->
+      @if (filters().period === 'custom') {
+        <div class="flex flex-wrap gap-3 items-end mb-4 p-3 bg-[#F5F7FA] rounded-lg">
+          <div>
+            <label class="block text-xs font-medium text-[#6B7280] mb-1">Du</label>
+            <input type="date" [(ngModel)]="filters().date_from" (change)="applyFilters()"
+              class="px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-[#6B7280] mb-1">Au</label>
+            <input type="date" [(ngModel)]="filters().date_to" (change)="applyFilters()"
+              class="px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none" />
+          </div>
+        </div>
+      }
+
+      <div class="flex flex-wrap items-end gap-4">
+        @if (canSeeAllCampuses()) {
+          <div class="flex-1 min-w-[150px]">
+            <label class="block text-xs font-medium text-[#6B7280] mb-1">Campus</label>
+            <select [(ngModel)]="filters().campus_id" (change)="applyFilters()"
+              class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none">
+              <option [ngValue]="null">Tous les campus</option>
+              @for (campus of campuses(); track campus.id) {
+                <option [value]="campus.id">{{ campus.name }}</option>
+              }
+            </select>
+          </div>
+        }
+        <div class="flex-1 min-w-[200px]">
+          <label class="block text-xs font-medium text-[#6B7280] mb-1">Rechercher</label>
+          <input type="text" [(ngModel)]="filters().search" (keyup.enter)="applyFilters()"
+            placeholder="Nom ou matricule..."
+            class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none" />
+        </div>
+        <button (click)="applyFilters()" class="px-4 py-2 bg-[#15157D] text-white text-sm font-medium rounded-lg hover:bg-[#2E3192] transition-colors">
+          Rechercher
+        </button>
+        <button (click)="resetFilters()" class="px-4 py-2 text-sm text-[#6B7280] hover:text-[#15157D] hover:bg-[#E8F0FE] rounded-lg transition-colors">
+          <span class="material-symbols-outlined text-sm align-middle">refresh</span> Réinitialiser
+        </button>
+      </div>
+    </div>
+
+    <!-- Tableau -->
+    <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-[#F5F7FA] border-b border-[#E5E7EB]">
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Date</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Référence</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Étudiant</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Formation</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Campus</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Montant</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#E5E7EB]">
+            @for (p of payments(); track p.id; let i = $index) {
+              <tr class="hover:bg-[#F5F7FA] transition-colors animate-fade-in-up" [style.animation-delay]="(0.1 + (i * 0.03)) + 's'">
+                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ p.payment_date | date:'dd/MM/yyyy' }}</td>
+                <td class="px-6 py-4">
+                  <span class="font-mono text-xs text-[#15157D]">{{ p.reference || '-' }}</span>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-[#E8F0FE] flex items-center justify-center text-[#15157D] font-bold text-xs">
+                      {{ p.registration?.student?.first_name?.[0] || '?' }}{{ p.registration?.student?.last_name?.[0] || '?' }}
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-[#0B1C30]">
+                        {{ p.registration?.student?.first_name || 'N/A' }} {{ p.registration?.student?.last_name || 'N/A' }}
+                      </p>
+                      <p class="text-xs text-[#6B7280]">{{ p.registration?.student?.registration_number || '-' }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ p.registration?.formation?.name || '-' }}</td>
+                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ p.registration?.campus?.name || '-' }}</td>
+                <td class="px-6 py-4 text-right">
+                  <p class="text-sm font-semibold text-green-700">{{ formatPrice(p.amount) }}</p>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <!-- ✅ Reçu avec loader global (même logique que registrations) -->
+                    <button (click)="downloadReceipt(p.id)" [disabled]="downloading()"
+                      class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6C3CE1] hover:text-[#5A2CB8] transition-colors disabled:opacity-50"
+                      title="Ouvrir le reçu PDF">
+                      @if (downloading()) {
+                        <span class="w-5 h-5 border-2 border-[#6C3CE1] border-t-transparent rounded-full animate-spin inline-block"></span>
+                      } @else {
+                        <span class="material-symbols-outlined text-xl">picture_as_pdf</span>
+                      }
+                    </button>
+
+                    <!-- Supprimer -->
+                    @if (canDelete()) {
+                      <button (click)="openDeleteModal(p)"
+                        class="p-2 rounded-lg hover:bg-red-50 text-[#6B7280] hover:text-[#BB0013] transition-colors"
+                        title="Annuler ce paiement">
+                        <span class="material-symbols-outlined text-xl">delete</span>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="text-center py-12 text-[#6B7280]">
+                  <span class="material-symbols-outlined text-5xl text-[#E5E7EB] block mb-3">payments</span>
+                  <p>Aucun paiement trouvé pour cette période</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (meta().total > 0) {
+        <div class="flex items-center justify-between px-6 py-4 border-t border-[#E5E7EB]">
+          <div class="text-sm text-[#6B7280]">
+            Affichage de <span class="font-medium">{{ meta().from }}</span> à <span class="font-medium">{{ meta().to }}</span> sur <span class="font-medium">{{ meta().total }}</span> paiements
+          </div>
+          <div class="flex items-center gap-1">
+            <button (click)="goToPage(meta().current_page - 1)" [disabled]="meta().current_page === 1" class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-sm">chevron_left</span>
+            </button>
+            @for (page of getPages(); track $index) {
+              @if (page === -1) { <span class="px-2 text-[#6B7280]">…</span> }
+              @else {
+                <button (click)="goToPage(page)" [class.bg-[#15157D]]="page === meta().current_page" [class.text-white]="page === meta().current_page" [class.text-[#6B7280]]="page !== meta().current_page" [class.font-medium]="page === meta().current_page" class="w-8 h-8 rounded-lg hover:bg-[#F5F7FA] transition-colors text-sm">
+                  {{ page }}
+                </button>
+              }
+            }
+            <button (click)="goToPage(meta().current_page + 1)" [disabled]="meta().current_page === meta().last_page" class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-sm">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL NOUVEAU PAIEMENT -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showModal()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeModal()">
+      <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-slide-up" (click)="$event.stopPropagation()">
+
+        <!-- ÉTAPE 1 : RECHERCHE -->
+        @if (modalStep() === 1) {
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+                <span class="material-symbols-outlined text-2xl">search</span>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold text-[#0B1C30]">Rechercher un étudiant</h2>
+                <p class="text-sm text-[#6B7280]">Entrez le nom ou le matricule</p>
+              </div>
+            </div>
+            <button type="button" (click)="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div class="relative mb-4">
+            <input type="text" [(ngModel)]="searchQuery" (input)="onSearch()"
+              placeholder="Tapez le nom ou le matricule..."
+              class="w-full px-4 py-3 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" />
+            @if (searching()) {
+              <span class="absolute right-3 top-3 material-symbols-outlined animate-spin text-[#15157D]">refresh</span>
+            }
+          </div>
+
+          <div class="max-h-60 overflow-y-auto space-y-2">
+            @for (s of searchResults(); track s.id) {
+              <div (click)="selectStudent(s)"
+                class="p-3 border border-[#E5E7EB] rounded-lg hover:bg-[#E8F0FE] cursor-pointer transition-colors flex justify-between items-center">
+                <div>
+                  <div class="font-semibold text-[#0B1C30]">{{ s.name }}</div>
+                  <div class="text-xs text-[#6B7280]">{{ s.matricule }} • {{ s.formation }}</div>
+                </div>
+                <span class="material-symbols-outlined text-[#15157D]">chevron_right</span>
+              </div>
+            } @empty {
+              @if (searchQuery().length >= 2 && !searching()) {
+                <p class="text-center text-sm text-[#6B7280] py-4">Aucun étudiant trouvé</p>
+              }
+            }
+          </div>
+        }
+
+        <!-- ÉTAPE 2 : PAIEMENT -->
+        @if (modalStep() === 2 && selectedStudent()) {
+          <div class="flex items-center gap-2 mb-6">
+            <button (click)="goBackToSearch()" class="text-sm text-[#6B7280] hover:text-[#15157D] flex items-center gap-1 transition-colors">
+              <span class="material-symbols-outlined text-sm">arrow_back</span> Retour
+            </button>
+            <div class="flex items-center gap-3 ml-2">
+              <div class="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center text-green-700">
+                <span class="material-symbols-outlined text-2xl">account_balance_wallet</span>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold text-[#0B1C30]">Nouveau versement</h2>
+                <p class="text-sm text-[#6B7280]">Vérifiez et saisissez le montant</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-[#F5F7FA] p-4 rounded-xl mb-4 space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-[#6B7280]">Étudiant :</span>
+              <span class="font-semibold text-[#0B1C30]">{{ selectedStudent().name }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-[#6B7280]">Matricule :</span>
+              <span class="font-semibold text-[#0B1C30]">{{ selectedStudent().matricule }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-[#6B7280]">Formation :</span>
+              <span class="font-semibold text-[#0B1C30]">{{ selectedStudent().formation }}</span>
+            </div>
+            <div class="border-t border-[#E5E7EB] my-2"></div>
+            <div class="flex justify-between">
+              <span class="text-[#6B7280]">Frais totaux :</span>
+              <span class="text-[#0B1C30]">{{ formatPrice(selectedStudent().tuition_fees) }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-[#6B7280]">Déjà versé :</span>
+              <span class="text-green-700 font-semibold">{{ formatPrice(selectedStudent().amount_paid) }}</span>
+            </div>
+            <div class="flex justify-between text-lg font-bold">
+              <span class="text-[#BB0013]">Reste actuel :</span>
+              <span class="text-[#BB0013]">{{ formatPrice(selectedStudent().balance) }}</span>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-[#0B1C30] mb-1">
+              Montant du versement (FCFA) <span class="text-[#BB0013]">*</span>
+            </label>
+            <input type="number" [(ngModel)]="paymentAmount"
+              class="w-full px-4 py-3 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all text-lg font-semibold"
+              placeholder="0" min="1" />
+          </div>
+
+          @if (paymentAmount() !== null && paymentAmount()! > 0) {
+            <div class="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg flex justify-between items-center">
+              <span class="text-sm font-medium text-green-800">Nouveau reste à payer :</span>
+              <span class="text-xl font-bold text-green-700">{{ formatPrice(newBalance()) }}</span>
+            </div>
+          }
+
+          <div class="flex gap-3 justify-end">
+            <button type="button" (click)="closeModal()" class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">
+              Annuler
+            </button>
+            <button type="button" (click)="validatePayment()"
+              [disabled]="submitting() || !paymentAmount() || paymentAmount()! <= 0"
+              class="px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-xl hover:bg-green-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              @if (submitting()) {
+                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Enregistrement...
+              } @else {
+                <span class="material-symbols-outlined text-sm">save</span>
+                Valider & Télécharger le reçu
+              }
+            </button>
+          </div>
+        }
+
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL SUPPRESSION -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showDeleteModal()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeDeleteModal()">
+      <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-slide-up" (click)="$event.stopPropagation()">
+        <div class="flex flex-col items-center text-center">
+          <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-[#BB0013] mb-4">
+            <span class="material-symbols-outlined text-4xl">delete_forever</span>
+          </div>
+          <h2 class="text-xl font-bold text-[#0B1C30]">Annuler ce paiement ?</h2>
+          <p class="text-[#6B7280] text-sm mt-2">
+            Êtes-vous sûr de vouloir annuler le paiement de
+            <span class="font-semibold text-[#0B1C30]">{{ formatPrice(paymentToDelete()?.amount || 0) }}</span>
+            pour
+            <span class="font-semibold text-[#0B1C30]">
+              {{ paymentToDelete()?.registration?.student?.first_name }} {{ paymentToDelete()?.registration?.student?.last_name }}
+            </span> ?
+          </p>
+          <p class="text-xs text-[#6B7280] mt-2">
+            ⚠️ Une transaction négative sera enregistrée et le solde de l'étudiant sera recalculé.
+          </p>
+        </div>
+        <div class="flex gap-3 justify-center mt-6 pt-4 border-t border-[#E5E7EB]">
+          <button type="button" (click)="closeDeleteModal()" class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">
+            Annuler
+          </button>
+          <button type="button" (click)="confirmDelete()" [disabled]="submitting()"
+            class="px-5 py-2.5 bg-[#BB0013] text-white text-sm font-medium rounded-xl hover:bg-[#93000D] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            @if (submitting()) {
+              <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Suppression...
+            } @else {
+              <span class="material-symbols-outlined text-sm">delete</span> Supprimer
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

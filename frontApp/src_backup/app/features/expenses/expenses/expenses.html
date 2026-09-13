@@ -1,0 +1,341 @@
+<div class="p-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 animate-fade-in-up" style="animation-delay: 0.1s;">
+    <div>
+      <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#15157D] text-3xl">receipt_long</span>
+        Gestion des Dépenses
+      </h1>
+      <p class="text-[#6B7280] text-sm mt-1">Enregistrez et suivez les dépenses du centre</p>
+    </div>
+    @if (canCreate()) {
+      <button 
+        (click)="openCreateModal()"
+        class="bg-[#15157D] text-white px-5 py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm whitespace-nowrap"
+      >
+        <span class="material-symbols-outlined text-lg">add</span>
+        Nouvelle dépense
+      </button>
+    }
+  </div>
+
+  <!-- ═══ CARTES DE RÉSUMÉ FINANCIER ═══ -->
+  @if (summary()) {
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4">
+        <p class="text-xs text-[#6B7280] mb-1">Ce mois-ci</p>
+        <p class="text-xl font-bold text-[#BB0013]">{{ formatPrice(summary().this_month) }}</p>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4">
+        <p class="text-xs text-[#6B7280] mb-1">Mois dernier</p>
+        <p class="text-xl font-bold text-[#6B7280]">{{ formatPrice(summary().last_month) }}</p>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4">
+        <p class="text-xs text-[#6B7280] mb-1">Cette année</p>
+        <p class="text-xl font-bold text-[#15157D]">{{ formatPrice(summary().this_year) }}</p>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4">
+        <p class="text-xs text-[#6B7280] mb-1">Total général</p>
+        <p class="text-xl font-bold text-[#0B1C30]">{{ formatPrice(summary().total) }}</p>
+      </div>
+    </div>
+  }
+
+  <!-- ═══ FILTRES ═══ -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4 mb-6">
+    <div class="flex flex-wrap items-end gap-4">
+      @if (canSeeAllCampuses()) {
+        <div class="flex-1 min-w-[150px]">
+          <label class="block text-xs font-medium text-[#6B7280] mb-1">Campus</label>
+          <select [(ngModel)]="filters().campus_id" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
+            <option [ngValue]="null">Tous les campus</option>
+            @for (campus of campuses(); track campus.id) {
+              <option [value]="campus.id">{{ campus.name }}</option>
+            }
+          </select>
+        </div>
+      }
+      <div class="flex-1 min-w-[150px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Catégorie</label>
+        <select [(ngModel)]="filters().category" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
+          <option value="">Toutes les catégories</option>
+          <option value="salary">Salaires</option>
+          <option value="other">Autres dépenses</option>
+        </select>
+      </div>
+      <div class="flex-1 min-w-[120px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Année</label>
+        <select [(ngModel)]="filters().year" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
+          <option [value]="null">Toutes les années</option>
+          @for (year of years; track year) {
+            <option [value]="year">{{ year }}</option>
+          }
+        </select>
+      </div>
+      <div class="flex-1 min-w-[150px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Période</label>
+        <select [(ngModel)]="filters().period" (change)="applyFilters()" class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none">
+          <option value="">Toutes les périodes</option>
+          <option value="today">Aujourd'hui</option>
+          <option value="this_week">Cette semaine</option>
+          <option value="this_month">Ce mois-ci</option>
+          <option value="last_month">Le mois dernier</option>
+          <option value="this_year">Cette année</option>
+        </select>
+      </div>
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Rechercher</label>
+        <input 
+          type="text"
+          [(ngModel)]="filters().search"
+          (keyup.enter)="applyFilters()"
+          placeholder="Description ou référence..."
+          class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] focus:ring-2 focus:ring-[#15157D]/20 outline-none"
+        />
+      </div>
+      <button (click)="applyFilters()" class="px-4 py-2 bg-[#15157D] text-white text-sm font-medium rounded-lg hover:bg-[#2E3192] transition-colors">Rechercher</button>
+      <button (click)="resetFilters()" class="px-4 py-2 text-sm text-[#6B7280] hover:text-[#15157D] hover:bg-[#E8F0FE] rounded-lg transition-colors">
+        <span class="material-symbols-outlined text-sm align-middle">refresh</span> Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ TABLEAU DES DÉPENSES ═══ -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+    @if (loading()) {
+      <div class="flex flex-col items-center justify-center py-20">
+        <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+        <p class="text-[#6B7280] mt-4 text-sm">Chargement des dépenses...</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-[#F5F7FA] border-b border-[#E5E7EB]">
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Référence</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Description</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Catégorie</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Campus</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Enregistré par</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Date</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Montant</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#E5E7EB]">
+            @for (expense of expenses(); track expense.id; let i = $index) {
+              <tr class="hover:bg-[#F5F7FA] transition-colors animate-fade-in-up" [style.animation-delay]="(0.1 + (i * 0.03)) + 's'">
+                <td class="px-6 py-4">
+                  <span class="font-mono text-sm font-semibold text-[#15157D]">{{ expense.reference }}</span>
+                </td>
+                <td class="px-6 py-4">
+                  <p class="text-sm text-[#0B1C30] max-w-xs truncate">{{ expense.description }}</p>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ getCategoryClass(expense.category) }} inline-flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">{{ getCategoryIcon(expense.category) }}</span>
+                    {{ getCategoryLabel(expense.category) }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ expense.campus?.name || '-' }}</td>
+                <td class="px-6 py-4 text-sm text-[#6B7280]">
+                  {{ expense.created_by?.first_name || '' }} {{ expense.created_by?.last_name || '' }}
+                </td>
+                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ formatDateTime(expense.created_at) }}</td>
+                <td class="px-6 py-4 text-right">
+                  <span class="text-sm font-bold text-[#BB0013]">{{ formatPrice(expense.amount) }}</span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  @if (canDelete()) {
+                    <button 
+                      (click)="openDeleteModal(expense)"
+                      class="p-2 rounded-lg hover:bg-red-50 text-[#6B7280] hover:text-[#BB0013] transition-colors"
+                      title="Supprimer"
+                    >
+                      <span class="material-symbols-outlined text-xl">delete</span>
+                    </button>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="text-center py-12 text-[#6B7280]">
+                  <span class="material-symbols-outlined text-5xl text-[#E5E7EB] block mb-3">receipt_long</span>
+                  <p>Aucune dépense enregistrée</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Total de la page courante -->
+      @if (expenses().length > 0) {
+        <div class="px-6 py-3 bg-[#F5F7FA] border-t border-[#E5E7EB] flex justify-between items-center">
+          <span class="text-sm text-[#6B7280]">Total affiché :</span>
+          <span class="text-lg font-bold text-[#BB0013]">{{ formatPrice(totalAmount()) }}</span>
+        </div>
+      }
+
+      <!-- Pagination -->
+      @if (meta().total > 0) {
+        <div class="flex items-center justify-between px-6 py-4 border-t border-[#E5E7EB]">
+          <div class="text-sm text-[#6B7280]">
+            Affichage de <span class="font-medium">{{ meta().from }}</span> à <span class="font-medium">{{ meta().to }}</span> sur <span class="font-medium">{{ meta().total }}</span> dépenses
+          </div>
+          <div class="flex items-center gap-1">
+            <button (click)="goToPage(meta().current_page - 1)" [disabled]="meta().current_page === 1" class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-sm">chevron_left</span>
+            </button>
+            @for (page of getPages(); track $index) {
+              @if (page === -1) { <span class="px-2 text-[#6B7280]">…</span> }
+              @else {
+                <button (click)="goToPage(page)" [class.bg-[#15157D]]="page === meta().current_page" [class.text-white]="page === meta().current_page" [class.text-[#6B7280]]="page !== meta().current_page" [class.font-medium]="page === meta().current_page" class="w-8 h-8 rounded-lg hover:bg-[#F5F7FA] transition-colors text-sm">
+                  {{ page }}
+                </button>
+              }
+            }
+            <button (click)="goToPage(meta().current_page + 1)" [disabled]="meta().current_page === meta().last_page" class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-sm">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL CRÉATION DE DÉPENSE -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showModal()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeModal()">
+      <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-slide-up" (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-[#BB0013]">
+              <span class="material-symbols-outlined text-2xl">receipt_long</span>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-[#0B1C30]">Nouvelle dépense</h2>
+              <p class="text-sm text-[#6B7280]">Enregistrez une sortie d'argent</p>
+            </div>
+          </div>
+          <button type="button" (click)="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <form (ngSubmit)="onSubmit()">
+          <div class="space-y-4">
+            
+            <!-- Campus -->
+            @if (canSeeAllCampuses()) {
+              <div>
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Campus <span class="text-[#BB0013]">*</span></label>
+                <select [(ngModel)]="formData().campus_id" name="campus_id" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all appearance-none bg-white" [class.border-[#BB0013]]="errors().campus_id" [class.border-[#E5E7EB]]="!errors().campus_id">
+                  <option [value]="null">Sélectionner un campus</option>
+                  @for (campus of campuses(); track campus.id) {
+                    <option [value]="campus.id">{{ campus.name }}</option>
+                  }
+                </select>
+                @if (errors().campus_id) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().campus_id }}</p> }
+              </div>
+            } @else {
+              <div>
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Campus</label>
+<input type="text" [value]="getCampusName(currentUser?.campus_id)" disabled class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl bg-[#F5F7FA] text-[#6B7280]" />              </div>
+            }
+
+            <!-- Catégorie -->
+            <div>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Catégorie <span class="text-[#BB0013]">*</span></label>
+              <select [(ngModel)]="formData().category" name="category" class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all appearance-none bg-white" [class.border-[#BB0013]]="errors().category" [class.border-[#E5E7EB]]="!errors().category">
+                <option value="">Sélectionner une catégorie</option>
+                <option value="salary">💰 Salaire</option>
+                <option value="other">📦 Autre dépense (fournitures, transport, etc.)</option>
+              </select>
+              @if (errors().category) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().category }}</p> }
+            </div>
+
+            <!-- Montant -->
+            <div>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Montant (FCFA) <span class="text-[#BB0013]">*</span></label>
+              <input 
+                type="number"
+                [(ngModel)]="formData().amount"
+                name="amount"
+                class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all text-lg font-semibold"
+                [class.border-[#BB0013]]="errors().amount"
+                [class.border-[#E5E7EB]]="!errors().amount"
+                placeholder="0"
+                min="1"
+              />
+              @if (errors().amount) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().amount }}</p> }
+            </div>
+
+            <!-- Description -->
+            <div>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Description <span class="text-[#BB0013]">*</span></label>
+              <textarea 
+                [(ngModel)]="formData().description"
+                name="description"
+                rows="3"
+                class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all resize-none"
+                [class.border-[#BB0013]]="errors().description"
+                [class.border-[#E5E7EB]]="!errors().description"
+                placeholder="Ex: Achat de 10 ramettes de papier, Salaire du mois de septembre..."
+              ></textarea>
+              @if (errors().description) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().description }}</p> }
+              <p class="text-xs text-[#6B7280] mt-1">Soyez précis pour faciliter le suivi comptable</p>
+            </div>
+
+          </div>
+
+          <div class="flex gap-3 justify-end mt-6 pt-4 border-t border-[#E5E7EB]">
+            <button type="button" (click)="closeModal()" class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">Annuler</button>
+            <button type="submit" [disabled]="submitting()" class="px-5 py-2.5 bg-[#15157D] text-white text-sm font-medium rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              @if (submitting()) {
+                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Enregistrement...
+              } @else {
+                <span class="material-symbols-outlined text-sm">save</span> Enregistrer la dépense
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL SUPPRESSION -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showDeleteModal()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeDeleteModal()">
+      <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-slide-up" (click)="$event.stopPropagation()">
+        <div class="flex flex-col items-center text-center">
+          <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-[#BB0013] mb-4">
+            <span class="material-symbols-outlined text-4xl">delete_forever</span>
+          </div>
+          <h2 class="text-xl font-bold text-[#0B1C30]">Confirmer la suppression</h2>
+          <p class="text-[#6B7280] text-sm mt-2">
+            Êtes-vous sûr de vouloir supprimer la dépense 
+            <span class="font-semibold text-[#0B1C30]">{{ expenseToDelete()?.reference }}</span> 
+            d'un montant de 
+            <span class="font-semibold text-[#BB0013]">{{ formatPrice(expenseToDelete()?.amount) }}</span> ?
+          </p>
+          <p class="text-xs text-[#6B7280] mt-1">Cette action est irréversible.</p>
+        </div>
+        <div class="flex gap-3 justify-center mt-6 pt-4 border-t border-[#E5E7EB]">
+          <button type="button" (click)="closeDeleteModal()" class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">Annuler</button>
+          <button type="button" (click)="confirmDelete()" [disabled]="submitting()" class="px-5 py-2.5 bg-[#BB0013] text-white text-sm font-medium rounded-xl hover:bg-[#93000D] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            @if (submitting()) {
+              <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Suppression...
+            } @else {
+              <span class="material-symbols-outlined text-sm">delete</span> Supprimer
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

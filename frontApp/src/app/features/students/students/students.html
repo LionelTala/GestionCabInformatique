@@ -102,7 +102,7 @@
                       {{ student.first_name?.[0] }}{{ student.last_name?.[0] }}
                     </div>
                     <div>
-                      <p class="text-sm font-medium text-[#0B1C30]">{{ student.first_name }} {{ student.last_name }}</p>
+                      <p class="text-sm font-medium text-[#0B1C30]">{{ student.last_name }} {{ student.first_name }}</p>
                       <p class="text-xs text-[#6B7280]">{{ student.email || '-' }}</p>
                     </div>
                   </div>
@@ -189,7 +189,7 @@
                 </div>
               }
             </div>
-            <h2 class="text-2xl font-bold text-[#0B1C30]">{{ studentDetails().student.first_name }} {{ studentDetails().student.last_name }}</h2>
+            <h2 class="text-2xl font-bold text-[#0B1C30]">{{ studentDetails().student.last_name }} {{ studentDetails().student.first_name }}</h2>
             <p class="text-sm text-[#6B7280]">Matricule : {{ studentDetails().student.registration_number }}</p>
           </div>
 
@@ -226,7 +226,21 @@
               <div><span class="text-[#6B7280]">Email :</span> <span class="font-medium text-[#0B1C30]">{{ studentDetails().student.email || '-' }}</span></div>
               <div><span class="text-[#6B7280]">Téléphone :</span> <span class="font-medium text-[#0B1C30]">{{ studentDetails().student.phone || '-' }}</span></div>
               <div><span class="text-[#6B7280]">Date de naissance :</span> <span class="font-medium text-[#0B1C30]">{{ formatDate(studentDetails().student.date_of_birth) }}</span></div>
-              <div><span class="text-[#6B7280]">Adresse :</span> <span class="font-medium text-[#0B1C30]">{{ studentDetails().student.address || '-' }}</span></div>
+              <div><span class="text-[#6B7280]">Résidence :</span> <span class="font-medium text-[#0B1C30]">{{ studentDetails().student.residence || '-' }}</span></div>
+              <div><span class="text-[#6B7280]">Diplôme le plus élevé :</span> <span class="font-medium text-[#0B1C30]">{{ studentDetails().student.highest_diploma || '-' }}</span></div>
+              <div><span class="text-[#6B7280]">Année du diplôme :</span> <span class="font-medium text-[#0B1C30]">{{ studentDetails().student.diploma_year || '-' }}</span></div>
+              <div class="col-span-2">
+                <span class="text-[#6B7280]">Langues :</span>
+                <span class="font-medium text-[#0B1C30]">
+                  @if (parseLanguages(studentDetails().student.languages).length > 0) {
+                    @for (lang of parseLanguages(studentDetails().student.languages); track lang; let last = $last) {
+                      {{ lang }}{{ !last ? ', ' : '' }}
+                    }
+                  } @else {
+                    -
+                  }
+                </span>
+              </div>
               <div><span class="text-[#6B7280]">Parent :</span> <span class="font-medium text-[#0B1C30]">{{ studentDetails().student.parent_name || '-' }}</span></div>
               <div><span class="text-[#6B7280]">Tél. parent :</span> <span class="font-medium text-[#0B1C30]">{{ studentDetails().student.parent_phone || '-' }}</span></div>
             </div>
@@ -588,9 +602,47 @@
               <input type="date" [(ngModel)]="editFormData().date_of_birth" name="date_of_birth" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Adresse</label>
-              <textarea [(ngModel)]="editFormData().address" name="address" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all resize-none" rows="2"></textarea>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Résidence</label>
+              <textarea [(ngModel)]="editFormData().residence" name="residence" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all resize-none" rows="2"></textarea>
             </div>
+
+            <!-- ✅ NOUVEAUX CHAMPS : Diplôme + Langues -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Diplôme le plus élevé</label>
+                <select [(ngModel)]="editFormData().highest_diploma" name="highest_diploma" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all bg-white">
+                  <option [ngValue]="null">-- Sélectionner --</option>
+                  @for (diploma of diplomaOptions; track diploma) {
+                    <option [value]="diploma">{{ diploma }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Année d'obtention</label>
+                <input type="number" [(ngModel)]="editFormData().diploma_year" name="diploma_year" min="1900" max="2100" placeholder="Ex: 2023" class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all" />
+              </div>
+            </div>
+
+            <!-- ✅ LANGUES (CHECKBOXES) -->
+            <div>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-2">Langues parlées</label>
+              <div class="flex flex-wrap gap-3">
+                @for (lang of languageOptions; track lang.value) {
+                  <label class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors"
+                    [class.border-[#15157D]]="editFormData().languages?.includes(lang.value)"
+                    [class.bg-[#E8F0FE]]="editFormData().languages?.includes(lang.value)"
+                    [class.border-[#E5E7EB]]="!editFormData().languages?.includes(lang.value)"
+                    [class.bg-white]="!editFormData().languages?.includes(lang.value)">
+                    <input type="checkbox"
+                      [checked]="editFormData().languages?.includes(lang.value)"
+                      (change)="toggleEditLanguage(lang.value)"
+                      class="w-4 h-4 rounded border-[#E5E7EB] text-[#15157D] focus:ring-[#15157D]/20" />
+                    <span class="text-sm font-medium text-[#0B1C30]">{{ lang.label }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-sm font-medium text-[#0B1C30] mb-1">Nom du parent</label>

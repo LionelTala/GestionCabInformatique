@@ -1,0 +1,530 @@
+<div class="p-6">
+  <!-- ═══ Header ═══ -->
+ 
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 animate-fade-in-up" style="animation-delay: 0.1s;">
+    <div>
+      <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#15157D] text-3xl">point_of_sale</span>
+        Caisse
+      </h1>
+      <p class="text-[#6B7280] text-sm mt-1">Gérez les entrées et sorties de caisse</p>
+    </div>
+    <div class="flex gap-2">
+      <button
+        (click)="openModal('income')"
+        class="bg-green-600 text-white px-4 py-2.5 rounded-xl hover:bg-green-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm"
+      >
+        <span class="material-symbols-outlined text-lg">add_circle</span>
+        Nouvelle entrée
+      </button>
+      <button
+        (click)="openModal('expense')"
+        class="bg-[#BB0013] text-white px-4 py-2.5 rounded-xl hover:bg-[#93000D] transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm"
+      >
+        <span class="material-symbols-outlined text-lg">remove_circle</span>
+        Nouvelle sortie
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ KPIs ═══ -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4">
+      <p class="text-xs font-medium text-[#6B7280] mb-1">Solde aujourd'hui</p>
+      <p class="text-2xl font-bold" [class.text-green-700]="summary().today.balance >= 0" [class.text-[#BB0013]]="summary().today.balance < 0">
+        {{ formatPrice(summary().today.balance) }}
+      </p>
+      <p class="text-xs text-[#6B7280] mt-1">
+        +{{ formatPrice(summary().today.income) }} / -{{ formatPrice(summary().today.expense) }}
+      </p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4">
+      <p class="text-xs font-medium text-[#6B7280] mb-1">Solde ce mois</p>
+      <p class="text-2xl font-bold" [class.text-green-700]="summary().month.balance >= 0" [class.text-[#BB0013]]="summary().month.balance < 0">
+        {{ formatPrice(summary().month.balance) }}
+      </p>
+      <p class="text-xs text-[#6B7280] mt-1">
+        +{{ formatPrice(summary().month.income) }} / -{{ formatPrice(summary().month.expense) }}
+      </p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4">
+      <p class="text-xs font-medium text-[#6B7280] mb-1">Solde cette année</p>
+      <p class="text-2xl font-bold" [class.text-green-700]="summary().year.balance >= 0" [class.text-[#BB0013]]="summary().year.balance < 0">
+        {{ formatPrice(summary().year.balance) }}
+      </p>
+      <p class="text-xs text-[#6B7280] mt-1">
+        +{{ formatPrice(summary().year.income) }} / -{{ formatPrice(summary().year.expense) }}
+      </p>
+    </div>
+    <div class="bg-[#15157D] text-white rounded-xl shadow-sm p-4">
+      <p class="text-xs font-medium opacity-70 mb-1">Solde total</p>
+      <p class="text-2xl font-bold">{{ formatPrice(summary().total.balance) }}</p>
+      <p class="text-xs opacity-70 mt-1">
+        +{{ formatPrice(summary().total.income) }} / -{{ formatPrice(summary().total.expense) }}
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══ Filtres ═══ -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4 mb-6">
+    <div class="flex flex-wrap gap-2 mb-4">
+      @for (p of [
+        { key: 'today', label: 'Aujourd\'hui', icon: 'today' },
+        { key: 'week', label: 'Cette semaine', icon: 'date_range' },
+        { key: 'month', label: 'Ce mois', icon: 'calendar_month' },
+        { key: 'year', label: 'Cette année', icon: 'calendar_today' },
+        { key: 'custom', label: 'Personnalisé', icon: 'edit_calendar' },
+        { key: 'all', label: 'Tout', icon: 'all_inclusive' }
+      ]; track p.key) {
+        <button
+          (click)="setPeriod($any(p.key))"
+          [class.bg-[#15157D]]="filters().period === p.key"
+          [class.text-white]="filters().period === p.key"
+          [class.bg-white]="filters().period !== p.key"
+          [class.text-[#6B7280]]="filters().period !== p.key"
+          [class.border-[#15157D]]="filters().period === p.key"
+          [class.border-[#E5E7EB]]="filters().period !== p.key"
+          class="px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1 transition-all hover:border-[#15157D]"
+        >
+          <span class="material-symbols-outlined text-sm">{{ p.icon }}</span>
+          {{ p.label }}
+        </button>
+      }
+    </div>
+
+    @if (filters().period === 'custom') {
+      <div class="flex flex-wrap gap-3 items-end mb-4 p-3 bg-[#F5F7FA] rounded-lg">
+        <div>
+          <label class="block text-xs font-medium text-[#6B7280] mb-1">Du</label>
+          <input type="date" [(ngModel)]="filters().date_from" (change)="applyFilters()"
+            class="px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-[#6B7280] mb-1">Au</label>
+          <input type="date" [(ngModel)]="filters().date_to" (change)="applyFilters()"
+            class="px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none" />
+        </div>
+      </div>
+    }
+
+    <div class="flex flex-wrap items-end gap-4">
+      <div class="min-w-[130px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Type</label>
+        <select [(ngModel)]="filters().type" (change)="setType($any(filters().type))"
+          class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none">
+          <option value="">Tous</option>
+          <option value="income">Entrées</option>
+          <option value="expense">Sorties</option>
+        </select>
+      </div>
+
+      @if (filters().type) {
+        <div class="min-w-[160px]">
+          <label class="block text-xs font-medium text-[#6B7280] mb-1">Catégorie</label>
+          <select [(ngModel)]="filters().category" (change)="applyFilters()"
+            class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none">
+            <option value="">Toutes</option>
+            @for (cat of (filters().type === 'income' ? incomeCategories() : expenseCategories()) | keyvalue; track cat.key) {
+              <option [value]="cat.key">{{ cat.value }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      @if (canSeeAllCampuses()) {
+        <div class="flex-1 min-w-[150px]">
+          <label class="block text-xs font-medium text-[#6B7280] mb-1">Campus</label>
+          <select [(ngModel)]="filters().campus_id" (change)="applyFilters(); loadSummary()"
+            class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none">
+            <option [ngValue]="null">Tous les campus</option>
+            @for (campus of campuses(); track campus.id) {
+              <option [value]="campus.id">{{ campus.name }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-xs font-medium text-[#6B7280] mb-1">Rechercher</label>
+        <input type="text" [(ngModel)]="filters().search" (keyup.enter)="applyFilters()"
+          placeholder="Titre, référence..."
+          class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none" />
+      </div>
+
+      <button (click)="applyFilters()" class="px-4 py-2 bg-[#15157D] text-white text-sm font-medium rounded-lg hover:bg-[#2E3192] transition-colors">
+        Rechercher
+      </button>
+      <button (click)="resetFilters()" class="px-4 py-2 text-sm text-[#6B7280] hover:text-[#15157D] hover:bg-[#E8F0FE] rounded-lg transition-colors">
+        <span class="material-symbols-outlined text-sm align-middle">refresh</span> Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ Bandeau stats période ═══ -->
+  <div class="bg-[#15157D] text-white rounded-xl p-4 mb-4 grid grid-cols-3 gap-4 text-center">
+    <div>
+      <p class="text-[10px] uppercase opacity-70">Entrées ({{ getPeriodLabel() }})</p>
+      <p class="text-xl font-bold text-green-300">+{{ formatPrice(periodMeta().total_income) }}</p>
+    </div>
+    <div>
+      <p class="text-[10px] uppercase opacity-70">Sorties ({{ getPeriodLabel() }})</p>
+      <p class="text-xl font-bold text-red-300">-{{ formatPrice(periodMeta().total_expense) }}</p>
+    </div>
+    <div>
+      <p class="text-[10px] uppercase opacity-70">Solde période</p>
+      <p class="text-xl font-bold">{{ formatPrice(periodMeta().balance) }}</p>
+    </div>
+  </div>
+
+  <!-- ═══ Tableau ═══ -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+    @if (loading()) {
+      <div class="flex flex-col items-center justify-center py-20">
+        <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+        <p class="text-[#6B7280] mt-4 text-sm">Chargement des mouvements...</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-[#F5F7FA] border-b border-[#E5E7EB]">
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Date</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Référence</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Titre</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Catégorie</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Campus</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Montant</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#E5E7EB]">
+            @for (m of movements(); track m.id; let i = $index) {
+              <tr class="hover:bg-[#F5F7FA] transition-colors animate-fade-in-up" [style.animation-delay]="(0.1 + (i * 0.03)) + 's'">
+                <td class="px-6 py-4 text-sm text-[#6B7280]">
+                  {{ formatDate(m.created_at) }}
+                </td>
+                <td class="px-6 py-4">
+                  <span class="font-mono text-xs text-[#15157D]">{{ m.reference || '-' }}</span>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center"
+                      [class.bg-green-100]="m.type === 'income'"
+                      [class.text-green-700]="m.type === 'income'"
+                      [class.bg-red-100]="m.type === 'expense'"
+                      [class.text-red-700]="m.type === 'expense'">
+                      <span class="material-symbols-outlined text-lg">
+                    {{ m.type === 'income' ? 'arrow_upward' :'arrow_downward'  }}                      </span>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-[#0B1C30]">{{ m.title }}</p>
+                      @if (m.description) {
+                        <p class="text-xs text-[#6B7280] truncate max-w-xs">{{ m.description }}</p>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="px-2.5 py-1 rounded-full text-xs font-medium"
+                    [class.bg-green-100]="m.type === 'income'"
+                    [class.text-green-700]="m.type === 'income'"
+                    [class.bg-red-100]="m.type === 'expense'"
+                    [class.text-red-700]="m.type === 'expense'">
+                    {{ getCategoryLabel(m.category, m.type) }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ m.campus?.name || '-' }}</td>
+                <td class="px-6 py-4 text-right">
+                  <p class="text-sm font-semibold"
+                    [class.text-green-700]="m.type === 'income'"
+                    [class.text-red-700]="m.type === 'expense'">
+                    {{ m.type === 'income' ? '+' : '-' }}{{ formatPrice(m.amount) }}
+                  </p>
+                </td>
+                <td class="px-6 py-4 text-right">
+  <div class="flex items-center justify-end gap-1">
+    <!-- Pièce jointe -->
+    @if (m.attachment_path) {
+      <button
+        (click)="downloadAttachment(m)"
+        [disabled]="downloading()"
+        class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6C3CE1] hover:text-[#5A2CB8] transition-colors disabled:opacity-50"
+        title="Voir la pièce jointe"
+      >
+        @if (downloading()) {
+          <span class="w-5 h-5 border-2 border-[#6C3CE1] border-t-transparent rounded-full animate-spin inline-block"></span>
+        } @else {
+          <span class="material-symbols-outlined text-xl">attach_file</span>
+        }
+      </button>
+    }
+
+    <!-- ✅ Supprimer : toujours visible (le backend a filtré) -->
+    <button
+      (click)="openDeleteModal(m)"
+      class="p-2 rounded-lg hover:bg-red-50 text-[#6B7280] hover:text-[#BB0013] transition-colors"
+      title="Supprimer ce mouvement"
+    >
+      <span class="material-symbols-outlined text-xl">delete</span>
+    </button>
+  </div>
+</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="text-center py-12 text-[#6B7280]">
+                  <span class="material-symbols-outlined text-5xl text-[#E5E7EB] block mb-3">point_of_sale</span>
+                  <p>Aucun mouvement pour cette période</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (meta().total > 0) {
+        <div class="flex items-center justify-between px-6 py-4 border-t border-[#E5E7EB]">
+          <div class="text-sm text-[#6B7280]">
+            Affichage de <span class="font-medium">{{ meta().from }}</span> à <span class="font-medium">{{ meta().to }}</span> sur <span class="font-medium">{{ meta().total }}</span> mouvements
+          </div>
+          <div class="flex items-center gap-1">
+            <button (click)="goToPage(meta().current_page - 1)" [disabled]="meta().current_page === 1" class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-sm">chevron_left</span>
+            </button>
+            @for (page of getPages(); track $index) {
+              @if (page === -1) { <span class="px-2 text-[#6B7280]">…</span> }
+              @else {
+                <button (click)="goToPage(page)" [class.bg-[#15157D]]="page === meta().current_page" [class.text-white]="page === meta().current_page" [class.text-[#6B7280]]="page !== meta().current_page" [class.font-medium]="page === meta().current_page" class="w-8 h-8 rounded-lg hover:bg-[#F5F7FA] transition-colors text-sm">
+                  {{ page }}
+                </button>
+              }
+            }
+            <button (click)="goToPage(meta().current_page + 1)" [disabled]="meta().current_page === meta().last_page" class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-sm">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL CRÉATION -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showModal()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeModal()">
+      <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up" (click)="$event.stopPropagation()">
+
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+              [class.bg-green-100]="modalType() === 'income'"
+              [class.text-green-700]="modalType() === 'income'"
+              [class.bg-red-100]="modalType() === 'expense'"
+              [class.text-red-700]="modalType() === 'expense'">
+              <span class="material-symbols-outlined text-2xl">
+                {{ modalType() === 'income' ? 'add_circle' : 'remove_circle' }}
+              </span>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-[#0B1C30]">{{ modalTitle() }}</h2>
+              <p class="text-sm text-[#6B7280]">
+                {{ modalType() === 'income' ? 'Enregistrez une entrée d\'argent en caisse' : 'Enregistrez une sortie d\'argent' }}
+              </p>
+            </div>
+          </div>
+          <button type="button" (click)="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] transition-colors">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <form (ngSubmit)="onSubmit()">
+          <div class="space-y-4">
+
+            @if (canSeeAllCampuses()) {
+              <div>
+                <label class="block text-sm font-medium text-[#0B1C30] mb-1">Campus <span class="text-[#BB0013]">*</span></label>
+                <select [(ngModel)]="formData().campus_id" name="campus_id"
+                  class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none bg-white"
+                  [class.border-[#BB0013]]="errors().campus_id">
+                  <option [ngValue]="null">Sélectionner...</option>
+                  @for (campus of campuses(); track campus.id) {
+                    <option [value]="campus.id">{{ campus.name }}</option>
+                  }
+                </select>
+                @if (errors().campus_id) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().campus_id }}</p> }
+              </div>
+            }
+
+            <div>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Catégorie <span class="text-[#BB0013]">*</span></label>
+              <select [(ngModel)]="formData().category" name="category"
+                class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none bg-white"
+                [class.border-[#BB0013]]="errors().category">
+                <option value="">Sélectionner une catégorie...</option>
+                @for (cat of availableCategories() | keyvalue; track cat.key) {
+                  <option [value]="cat.key">{{ cat.value }}</option>
+                }
+              </select>
+              @if (errors().category) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().category }}</p> }
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Montant (FCFA) <span class="text-[#BB0013]">*</span></label>
+              <input type="number" [(ngModel)]="formData().amount" name="amount" min="1"
+                class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none text-lg font-semibold"
+                [class.border-[#BB0013]]="errors().amount"
+                [class.border-[#E5E7EB]]="!errors().amount"
+                placeholder="0" />
+              @if (errors().amount) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().amount }}</p> }
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Titre <span class="text-[#BB0013]">*</span></label>
+              <input type="text" [(ngModel)]="formData().title" name="title"
+                class="w-full px-4 py-2.5 border rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none"
+                [class.border-[#BB0013]]="errors().title"
+                [class.border-[#E5E7EB]]="!errors().title"
+                placeholder="Ex: Salaire du personnel" />
+              @if (errors().title) { <p class="text-sm text-[#BB0013] mt-1">{{ errors().title }}</p> }
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Description (optionnel)</label>
+              <textarea [(ngModel)]="formData().description" name="description" rows="3"
+                class="w-full px-4 py-2.5 border border-[#E5E7EB] rounded-xl focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none resize-none"
+                placeholder="Détails supplémentaires..."></textarea>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-[#0B1C30] mb-1">Pièce jointe (optionnel)</label>
+
+              @if (!selectedFile()) {
+                <div
+                  (click)="openFileSelector()"
+                  class="border-2 border-dashed border-[#E5E7EB] rounded-xl p-6 text-center cursor-pointer hover:border-[#15157D] hover:bg-[#E8F0FE]/30 transition-all"
+                >
+                  <span class="material-symbols-outlined text-4xl text-[#6B7280] block mb-2">cloud_upload</span>
+                  <p class="text-sm text-[#0B1C30] font-medium">Cliquez pour joindre un fichier</p>
+                  <p class="text-xs text-[#6B7280] mt-1">PDF, JPG, PNG • Max 5 Mo</p>
+                </div>
+              } @else {
+                <div class="border border-[#E5E7EB] rounded-xl p-3 flex items-center gap-3">
+                  @if (filePreview()) {
+                    <img [src]="filePreview()!" class="w-12 h-12 rounded-lg object-cover border border-[#E5E7EB]" alt="Aperçu" />
+                  } @else {
+                    <div class="w-12 h-12 rounded-lg bg-[#E8F0FE] flex items-center justify-center text-[#15157D]">
+                      <span class="material-symbols-outlined text-2xl">description</span>
+                    </div>
+                  }
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-[#0B1C30] truncate">{{ selectedFile()!.name }}</p>
+                    <p class="text-xs text-[#6B7280]">{{ (selectedFile()!.size / 1024).toFixed(0) }} Ko</p>
+                  </div>
+                  <button type="button" (click)="removeFile()"
+                    class="p-2 rounded-lg hover:bg-red-50 text-[#6B7280] hover:text-[#BB0013] transition-colors">
+                    <span class="material-symbols-outlined text-xl">close</span>
+                  </button>
+                </div>
+              }
+
+              <input type="file" id="cashFileInput" class="hidden"
+                accept=".pdf,.jpg,.jpeg,.png"
+                (change)="onFileSelected($event)" />
+
+              @if (fileError()) {
+                <p class="text-sm text-[#BB0013] mt-1">{{ fileError() }}</p>
+              }
+            </div>
+
+          </div>
+
+          <div class="flex gap-3 justify-end mt-6 pt-4 border-t border-[#E5E7EB]">
+            <button type="button" (click)="closeModal()"
+              class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">
+              Annuler
+            </button>
+            <button type="submit" [disabled]="submitting()"
+              class="px-5 py-2.5 text-white text-sm font-medium rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              [class.bg-green-600]="modalType() === 'income'"
+              [class.hover:bg-green-700]="modalType() === 'income'"
+              [class.bg-[#BB0013]]="modalType() === 'expense'"
+              [class.hover:bg-[#93000D]]="modalType() === 'expense'">
+              @if (submitting()) {
+                <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Enregistrement...
+              } @else {
+                <span class="material-symbols-outlined text-sm">save</span>
+                Enregistrer
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MODAL SUPPRESSION -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (showDeleteModal() && movementToDelete()) {
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" (click)="closeDeleteModal()">
+      <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-slide-up" (click)="$event.stopPropagation()">
+
+        <div class="flex flex-col items-center text-center">
+          <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-[#BB0013] mb-4">
+            <span class="material-symbols-outlined text-4xl">delete_forever</span>
+          </div>
+          <h2 class="text-xl font-bold text-[#0B1C30]">Confirmer la suppression</h2>
+          <p class="text-[#6B7280] text-sm mt-2">
+            Voulez-vous vraiment supprimer ce mouvement de caisse ?
+          </p>
+        </div>
+
+        <div class="bg-[#F5F7FA] rounded-xl p-4 my-6 space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-[#6B7280]">Titre :</span>
+            <span class="font-semibold text-[#0B1C30]">{{ movementToDelete().title }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-[#6B7280]">Référence :</span>
+            <span class="font-mono text-xs text-[#15157D]">{{ movementToDelete().reference }}</span>
+          </div>
+          <div class="border-t border-[#E5E7EB] my-2"></div>
+          <div class="flex justify-between text-lg font-bold">
+            <span [class.text-green-700]="movementToDelete().type === 'income'"
+                  [class.text-red-700]="movementToDelete().type === 'expense'">
+              {{ movementToDelete().type === 'income' ? 'Entrée' : 'Sortie' }} :
+            </span>
+            <span [class.text-green-700]="movementToDelete().type === 'income'"
+                  [class.text-red-700]="movementToDelete().type === 'expense'">
+              {{ movementToDelete().type === 'income' ? '+' : '-' }}{{ formatPrice(movementToDelete().amount) }}
+            </span>
+          </div>
+        </div>
+
+        <p class="text-xs text-[#6B7280] text-center mb-6">
+          ⚠️ Cette action est définitive et impacte le solde de la caisse.
+        </p>
+
+        <div class="flex gap-3 justify-center pt-4 border-t border-[#E5E7EB]">
+          <button type="button" (click)="closeDeleteModal()"
+            class="px-5 py-2.5 text-sm font-medium rounded-xl border border-[#E5E7EB] hover:bg-[#F5F7FA] transition-colors">
+            Annuler
+          </button>
+          <button type="button" (click)="confirmDelete()" [disabled]="submitting()"
+            class="px-5 py-2.5 bg-[#BB0013] text-white text-sm font-medium rounded-xl hover:bg-[#93000D] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            @if (submitting()) {
+              <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              Suppression...
+            } @else {
+              <span class="material-symbols-outlined text-sm">delete</span>
+              Supprimer
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

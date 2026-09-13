@@ -18,7 +18,8 @@ class Registration extends Model
         'campus_id',
         'formation_id',
         'academic_year_id',
-        'initial_payment', // ← RENOMMÉ
+        'initial_payment',
+        'custom_tuition',
         'status',
         'qr_code_hash',
         'created_by',
@@ -28,7 +29,10 @@ class Registration extends Model
     protected function casts(): array
     {
         return [
+            'custom_tuition'  => 'decimal:2',
             'initial_payment' => 'decimal:2',
+            'amount_paid'     => 'decimal:2',
+            'balance'         => 'decimal:2',
         ];
     }
 
@@ -69,7 +73,20 @@ class Registration extends Model
     }
 
     // ═══ ACCESSEURS ═══
-    
+
+    /**
+     * ✅ Prix réel appliqué (source de vérité)
+     * Priorité : custom_tuition → formation.tuition_fees (fallback)
+     */
+    public function getEffectiveTuitionAttribute(): float
+    {
+        return (float) (
+            $this->custom_tuition
+            ?? $this->formation?->tuition_fees
+            ?? 0
+        );
+    }
+
     /**
      * Montant total payé = initial_payment + somme des paiements confirmés
      */
@@ -79,29 +96,28 @@ class Registration extends Model
         $paymentsSum = $this->payments()
             ->where('status', 'confirmed')
             ->sum('amount');
-        
+
         return $initialPayment + (float) $paymentsSum;
     }
 
     /**
-     * Reste à payer = prix formation - montant payé
+     * ✅ Reste à payer = prix réel - montant payé
      */
     public function getBalanceAttribute(): float
     {
-        $tuitionFees = $this->formation->tuition_fees ?? 0;
-        return $tuitionFees - $this->amount_paid;
+        return max(0, $this->effective_tuition - $this->amount_paid);
     }
 
     /**
-     * Statut de paiement dynamique
+     * ✅ Statut de paiement dynamique
      */
     public function getPaymentStatusAttribute(): string
     {
-        $paid = $this->amount_paid;
-        $total = $this->formation->tuition_fees ?? 0;
+        $paid  = $this->amount_paid;
+        $total = $this->effective_tuition;
 
-        if ($paid <= 0) return 'unpaid';
-        if ($paid >= $total) return 'paid';
+        if ($paid <= 0)        return 'unpaid';
+        if ($paid >= $total)   return 'paid';
         return 'partial';
     }
 }

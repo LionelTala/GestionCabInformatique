@@ -18,6 +18,7 @@ class SuperAdminSeeder extends Seeder
             'role' => 'super_admin',
             'campus_id' => null,
             'is_active' => true,
+            'username' => env('SUPER_ADMIN_USERNAME', 'superadmin'),
         ]);
     }
 }

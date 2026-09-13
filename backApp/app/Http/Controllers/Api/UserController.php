@@ -5,6 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
+
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -14,7 +18,7 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = User::select('id', 'first_name', 'last_name', 'email', 'phone', 'role', 'campus_id', 'is_active', 'created_at')
+        $query = User::select('id', 'first_name', 'last_name', 'email', 'phone', 'role', 'campus_id', 'is_active', 'created_at','username')
             ->with('campus:id,name,city');
 
         match ($user->role) {
@@ -55,95 +59,95 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        $user = $request->user();
-
+        // 1. Validation : username est nullable (peut être null ou vide)
         $validated = $request->validate([
-            'first_name' => 'required|string|max:100',
-            'last_name' => 'required|string|max:100',
-            'email' => 'required|email|max:255|unique:users,email',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'nullable|email|unique:users,email',
             'password' => 'required|string|min:6',
+            'username' => 'nullable|string|max:255|unique:users,username',
+            'role' => 'required|in:super_admin,admin_global,admin_campus,secretary',
+            'campus_id' => 'nullable|integer|exists:campuses,id',
             'phone' => 'nullable|string|max:20',
-            'role' => 'required|in:admin_global,admin_campus,secretary',
-            'campus_id' => 'nullable|exists:campuses,id',
-            'is_active' => 'nullable|boolean',
+            'is_active' => 'boolean',
         ]);
 
-        // Restrictions par rôle
-        if ($user->role === 'admin_campus') {
-            if ($validated['role'] !== 'secretary') {
-                return response()->json(['message' => 'Un admin campus ne peut créer que des secrétaires'], 403);
-            }
-            $validated['campus_id'] = $user->campus_id;
+        // 2. AUTO-GÉNÉRATION ROBUSTE
+        // Si username est vide, null, ou n'existe pas, on le génère
+        if (empty($validated['username'])) {
+            $validated['username'] = $this->generateUniqueUsername($validated['first_name'], $validated['last_name']);
         }
 
-        if ($user->role === 'admin_global' && $validated['role'] === 'super_admin') {
-            return response()->json(['message' => 'Impossible de créer un super admin'], 403);
-        }
-
-        if (in_array($validated['role'], ['admin_campus', 'secretary']) && empty($validated['campus_id'])) {
-            return response()->json(['message' => 'Le campus est obligatoire pour ce rôle'], 422);
-        }
-
-        $validated['password'] = bcrypt($validated['password']);
-        $validated['is_active'] = $validated['is_active'] ?? true;
-
-        $newUser = User::create($validated);
-
-        Log::info('Utilisateur créé', [
-            'id' => $newUser->id,
-            'email' => $newUser->email,
-            'role' => $newUser->role,
-            'by' => $user->id,
-        ]);
+        // 3. Hashage et création
+        $validated['password'] = Hash::make($validated['password']);
+        
+        $user = User::create($validated);
 
         return response()->json([
-            'message' => 'Utilisateur créé avec succès',
-            'data' => $newUser->load('campus:id,name,city')
+            'message' => 'Utilisateur créé avec succès', 
+            'data' => $user
         ], 201);
     }
 
     public function update(Request $request, int $id)
-    {
-        $user = $request->user();
-        $target = User::select('id', 'first_name', 'last_name', 'email', 'phone', 'role', 'campus_id', 'is_active')
-            ->findOrFail($id);
+{
+    $user = $request->user();
+    $target = User::findOrFail($id);   // ✅ Récupère TOUTES les colonnes
 
-        $this->checkEditAccess($user, $target);
+    $this->checkEditAccess($user, $target);
 
-        $validated = $request->validate([
-            'first_name' => 'sometimes|required|string|max:100',
-            'last_name' => 'sometimes|required|string|max:100',
-            'email' => 'sometimes|required|email|max:255|unique:users,email,' . $id,
-            'phone' => 'nullable|string|max:20',
-            'role' => 'sometimes|in:admin_global,admin_campus,secretary',
-            'campus_id' => 'nullable|exists:campuses,id',
-            'is_active' => 'nullable|boolean',
-            'password' => 'nullable|string|min:6',
-        ]);
+    $validated = $request->validate([
+        'first_name' => 'sometimes|required|string|max:100',
+        'last_name'  => 'sometimes|required|string|max:100',
+        'email'      => 'nullable|email|max:255|unique:users,email,' . $id,
+        'phone'      => 'nullable|string|max:20',
+        // ✅ FIX : exclure l'utilisateur actuel de la vérification unique
+        'username'   => 'nullable|string|max:255|unique:users,username,' . $id,
 
-        if ($user->role === 'admin_campus') {
-            unset($validated['role'], $validated['campus_id']);
-        }
+        'role'       => 'sometimes|in:admin_global,admin_campus,secretary',
+        'campus_id'  => 'nullable|exists:campuses,id',
+        'is_active'  => 'nullable|boolean',
+        'password'   => 'nullable|string|min:6',
+    ]);
 
-        if (isset($validated['password'])) {
-            $validated['password'] = bcrypt($validated['password']);
+    // ✅ FIX : si email vide → null
+    if (array_key_exists('email', $validated) && $validated['email'] === '') {
+        $validated['email'] = null;
+    }
+
+    // ✅ FIX : si username vide → null (ou garder l'ancien)
+    if (array_key_exists('username', $validated) && $validated['username'] === '') {
+        $validated['username'] = $target->username; // garde l'ancien
+    }
+
+    // ✅ FIX : si password vide → ne pas modifier
+    if (array_key_exists('password', $validated)) {
+        if (!empty($validated['password'])) {
+            $validated['password'] = Hash::make($validated['password']);
         } else {
             unset($validated['password']);
         }
-
-        $target->update($validated);
-
-        Log::info('Utilisateur modifié', [
-            'id' => $target->id,
-            'by' => $user->id,
-            'changes' => array_keys($validated),
-        ]);
-
-        return response()->json([
-            'message' => 'Utilisateur modifié avec succès',
-            'data' => $target->load('campus:id,name,city')
-        ]);
     }
+
+    // Restriction admin_campus
+    if ($user->role === 'admin_campus') {
+        unset($validated['role'], $validated['campus_id']);
+    }
+
+    // ✅ FIX : nettoyer $validated des champs non-fillable
+    $target->update($validated);
+
+    Log::info('Utilisateur modifié', [
+        'id'      => $target->id,
+        'by'      => $user->id,
+        'changes' => array_keys($validated),   // ✅ On log juste les clés
+    ]);
+
+    return response()->json([
+        'message' => 'Utilisateur modifié avec succès',
+        'data'    => $target->fresh()->load('campus:id,name,city'),
+    ]);
+}
 
     public function destroy(Request $request, int $id)
     {
@@ -203,5 +207,21 @@ class UserController extends Controller
                 abort(403, 'Pas accès à ce rôle');
             }
         }
+    }
+     private function generateUniqueUsername(string $firstName, string $lastName): string
+    {
+        // Str::slug fait tout le travail sale : minuscules, suppression accents, espaces -> tirets
+        // Ex: "Jean-Pierre" + "Dupont Martin" => "jean-pierre.dupont-martin"
+        $base = Str::slug($firstName, '-') . '.' . Str::slug($lastName, '-');
+        $username = $base;
+        $counter = 1;
+
+        // Boucle pour garantir l'unicité (ex: jean-pierre.dupont-martin1, 2, etc.)
+        while (User::where('username', $username)->exists()) {
+            $username = $base . $counter;
+            $counter++;
+        }
+
+        return $username;
     }
 }

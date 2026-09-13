@@ -20,6 +20,11 @@ class Student extends Model
         'last_name',
         'date_of_birth',
         'email',
+        'residence',           // ✅ REMPLACE 'address'
+    'date_of_birth',
+    'highest_diploma',     // ✅ NOUVEAU
+    'diploma_year',        // ✅ NOUVEAU
+    'languages', 
         'phone',
         'address',
         'parent_name',
