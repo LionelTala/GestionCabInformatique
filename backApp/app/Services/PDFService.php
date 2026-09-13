@@ -10,46 +10,53 @@ class PDFService
     // ✅ FICHE D'INSCRIPTION (avec promo)
     // ═══════════════════════════════════════════════════════════
     public function generateRegistrationForm($registration, $qrCodeBase64)
-    {
-        // S'assurer que les relations sont chargées
-        $registration->load(['student', 'formation', 'campus', 'academicYear', 'scolarity']);
+{
+    // ✅ AJOUT : createdBy pour le créateur de l'inscription
+    $registration->load([
+        'student',
+        'formation',
+        'campus',
+        'academicYear',
+        'scolarity',
+        'createdBy:id,last_name,first_name',   // ✅ AJOUT
+    ]);
 
-        $student      = $registration->student;
-        $formation    = $registration->formation;
-        $campus       = $registration->campus;
-        $academicYear = $registration->academicYear;
-        $scolarity    = $registration->scolarity;
+    $student      = $registration->student;
+    $formation    = $registration->formation;
+    $campus       = $registration->campus;
+    $academicYear = $registration->academicYear;
+    $scolarity    = $registration->scolarity;
 
-        // ✅ SOURCE DE VÉRITÉ : registration.custom_tuition (avec fallback)
-        $tuitionFees  = (float) (
-            $registration->custom_tuition
-            ?? $scolarity?->tuition_fees
-            ?? $formation->tuition_fees
-            ?? 0
-        );
+    // ✅ SOURCE DE VÉRITÉ : registration.custom_tuition (avec fallback)
+    $tuitionFees  = (float) (
+        $registration->custom_tuition
+        ?? $scolarity?->tuition_fees
+        ?? $formation->tuition_fees
+        ?? 0
+    );
 
-        $amountPaid       = (float) ($scolarity?->amount_paid ?? $registration->amount_paid ?? 0);
-        $remainingAmount  = max(0, $tuitionFees - $amountPaid);
+    $amountPaid       = (float) ($scolarity?->amount_paid ?? $registration->amount_paid ?? 0);
+    $remainingAmount  = max(0, $tuitionFees - $amountPaid);
 
-        // ✅ Détection promo
-        $hasPromo = $tuitionFees < (float) $formation->tuition_fees;
+    // ✅ Détection promo
+    $hasPromo = $tuitionFees < (float) $formation->tuition_fees;
 
-        $pdf = Pdf::loadView('pdfs.registration_form', [
-            'registration'    => $registration,
-            'student'         => $student,
-            'formation'       => $formation,
-            'campus'          => $campus,
-            'academicYear'    => $academicYear,
-            'qrCodeBase64'    => $qrCodeBase64,
-            'amountPaid'      => $amountPaid,
-            'tuitionFees'     => $tuitionFees,
-            'remainingAmount' => $remainingAmount,
-            'hasPromo'        => $hasPromo,
-        ]);
+    $pdf = Pdf::loadView('pdfs.registration_form', [
+        'registration'    => $registration,
+        'student'         => $student,
+        'formation'       => $formation,
+        'campus'          => $campus,
+        'academicYear'    => $academicYear,
+        'qrCodeBase64'    => $qrCodeBase64,
+        'amountPaid'      => $amountPaid,
+        'tuitionFees'     => $tuitionFees,
+        'remainingAmount' => $remainingAmount,
+        'hasPromo'        => $hasPromo,
+    ]);
 
-        $pdf->setPaper('a4', 'portrait');
-        return $pdf->output();
-    }
+    $pdf->setPaper('a4', 'portrait');
+    return $pdf->output();
+}
 
     // ═══════════════════════════════════════════════════════════
     // ✅ REÇU DE PAIEMENT (avec promo + cumul)

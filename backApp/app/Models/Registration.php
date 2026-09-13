@@ -120,4 +120,8 @@ class Registration extends Model
         if ($paid >= $total)   return 'paid';
         return 'partial';
     }
+    public function createdBy(): BelongsTo
+{
+    return $this->belongsTo(User::class, 'created_by');
+}
 }
