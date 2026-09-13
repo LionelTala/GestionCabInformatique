@@ -1,0 +1,16 @@
+/* src/app/features/profile/profile/profile.css */
+
+/* ═══════════════════════════════════════════════════════════
+   ✅ CARTE IDENTITÉ (fix iPhone 7)
+   ═══════════════════════════════════════════════════════════ */
+.profile-hero-card {
+  /* ✅ Fallback couleur unie (iPhone 7) */
+  background-color: #15157D;
+}
+
+/* ✅ Gradient si le navigateur supporte */
+@supports (background: linear-gradient(to bottom right, #15157D, #2E3192)) {
+  .profile-hero-card {
+    background: linear-gradient(to bottom right, #15157D, #2E3192);
+  }
+}

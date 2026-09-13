@@ -147,7 +147,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
 
         <!-- Scolarité nette -->
-        <div class="bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-2xl shadow-lg p-4 sm:p-5">
+        <div class="net-solde-card net-solde-blue">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
               <span class="material-symbols-outlined text-2xl opacity-80">school</span>
@@ -173,7 +173,7 @@
         </div>
 
         <!-- Caisse nette -->
-        <div class="bg-gradient-to-br from-amber-600 to-amber-800 text-white rounded-2xl shadow-lg p-4 sm:p-5">
+        <div class="net-solde-card net-solde-amber">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
               <span class="material-symbols-outlined text-2xl opacity-80">point_of_sale</span>
@@ -207,7 +207,7 @@
 
       <!-- Détails Scolarité -->
       <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
-        <div class="p-4 border-b border-[#E5E7EB] flex items-center gap-2 bg-gradient-to-r from-blue-50 to-white">
+        <div class="p-4 border-b border-[#E5E7EB] flex items-center gap-2 header-gradient-blue">
           <span class="material-symbols-outlined text-blue-600">school</span>
           <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Scolarité</h3>
           <span class="ml-auto text-[10px] sm:text-xs text-[#6B7280]">{{ getPeriodLabel() }}</span>
@@ -232,7 +232,7 @@
 
       <!-- Détails Caisse -->
       <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
-        <div class="p-4 border-b border-[#E5E7EB] flex items-center gap-2 bg-gradient-to-r from-amber-50 to-white">
+        <div class="p-4 border-b border-[#E5E7EB] flex items-center gap-2 header-gradient-amber">
           <span class="material-symbols-outlined text-amber-600">point_of_sale</span>
           <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Caisse</h3>
           <span class="ml-auto text-[10px] sm:text-xs text-[#6B7280]">{{ getPeriodLabel() }}</span>
@@ -263,7 +263,7 @@
 
       <!-- Derniers paiements -->
       <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
-        <div class="p-3 sm:p-4 border-b border-[#E5E7EB] flex justify-between items-center bg-gradient-to-r from-green-50 to-white">
+        <div class="p-3 sm:p-4 border-b border-[#E5E7EB] flex justify-between items-center header-gradient-green">
           <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-green-600">payments</span>
             <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Paiements récents</h3>
@@ -301,7 +301,7 @@
 
       <!-- Mouvements de caisse -->
       <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
-        <div class="p-3 sm:p-4 border-b border-[#E5E7EB] flex justify-between items-center bg-gradient-to-r from-amber-50 to-white">
+        <div class="p-3 sm:p-4 border-b border-[#E5E7EB] flex justify-between items-center header-gradient-amber">
           <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-amber-600">point_of_sale</span>
             <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Caisse récente</h3>
@@ -355,7 +355,7 @@
     <!-- ═══════════════════════════════════════════════════════ -->
     @if (stats().recent_cancellations?.length > 0) {
       <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
-        <div class="p-3 sm:p-4 border-b border-[#E5E7EB] flex items-center gap-2 bg-gradient-to-r from-red-50 to-white">
+        <div class="p-3 sm:p-4 border-b border-[#E5E7EB] flex items-center gap-2 header-gradient-red">
           <span class="material-symbols-outlined text-red-600">undo</span>
           <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Annulations récentes</h3>
           <span class="ml-auto text-[10px] sm:text-xs text-[#6B7280]">{{ getPeriodLabel() }}</span>
@@ -387,7 +387,7 @@
     <!-- DERNIÈRES INSCRIPTIONS -->
     <!-- ═══════════════════════════════════════════════════════ -->
     <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
-      <div class="p-3 sm:p-4 border-b border-[#E5E7EB] flex justify-between items-center bg-gradient-to-r from-blue-50 to-white">
+      <div class="p-3 sm:p-4 border-b border-[#E5E7EB] flex justify-between items-center header-gradient-blue">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-[#15157D]">person_add</span>
           <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Dernières inscriptions</h3>
@@ -444,7 +444,7 @@
     <!-- ═══════════════════════════════════════════════════════ -->
     @if (isSuperAdmin() && stats().campus_breakdown?.length > 0) {
       <div class="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
-        <div class="p-3 sm:p-4 border-b border-[#E5E7EB] bg-gradient-to-r from-purple-50 to-white">
+        <div class="p-3 sm:p-4 border-b border-[#E5E7EB] header-gradient-purple">
           <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-purple-600">apartment</span>
             <h3 class="font-semibold text-[#0B1C30] text-sm sm:text-base">Vue par campus</h3>

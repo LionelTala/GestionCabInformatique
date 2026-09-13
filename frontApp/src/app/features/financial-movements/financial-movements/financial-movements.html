@@ -1,79 +1,80 @@
-<div class="p-6">
+<div class="p-3 sm:p-6">
+
   <!-- ═══ Header ═══ -->
-  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-    <div>
-      <h1 class="text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
-        <span class="material-symbols-outlined text-[#15157D] text-3xl">account_balance</span>
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
+    <div class="min-w-0">
+      <h1 class="text-xl sm:text-3xl font-bold text-[#0B1C30] flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#15157D] text-2xl sm:text-3xl">account_balance</span>
         Mouvements Financiers
       </h1>
-      <p class="text-[#6B7280] text-sm mt-1">Bilan comptable complet</p>
+      <p class="text-[#6B7280] text-xs sm:text-sm mt-1">Bilan comptable complet</p>
     </div>
     <button
       (click)="generateReport()"
-      class="bg-[#15157D] text-white px-5 py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium text-sm"
+      class="bg-[#15157D] text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:bg-[#2E3192] transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 font-medium text-xs sm:text-sm w-full sm:w-auto whitespace-nowrap"
     >
-      <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
+      <span class="material-symbols-outlined text-base sm:text-lg">picture_as_pdf</span>
       Générer le rapport PDF
     </button>
   </div>
 
   <!-- ═══ 2 SOLDES ═══ -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
 
     <!-- Solde de la période (filtrée) -->
-    <div class="bg-gradient-to-br from-[#15157D] to-[#2E3192] text-white rounded-xl p-5 shadow-lg">
+    <div class="net-solde-card net-solde-indigo">
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-2xl opacity-80">filter_alt</span>
-          <span class="font-semibold">Solde {{ getPeriodLabel() }}</span>
+          <span class="font-semibold text-sm sm:text-base">Solde {{ getPeriodLabel() }}</span>
         </div>
         <span class="text-[10px] uppercase bg-white/20 px-2 py-1 rounded-full">Période filtrée</span>
       </div>
 
-      <p class="text-3xl font-bold mb-3">{{ formatPrice(summary().period.balance) }}</p>
+      <p class="text-2xl sm:text-3xl font-bold mb-3">{{ formatPrice(summary().period.balance) }}</p>
 
       <div class="grid grid-cols-2 gap-2 text-xs">
         <div class="bg-white/10 rounded-lg p-2">
           <p class="opacity-70">Entrées</p>
-          <p class="font-bold text-green-300">+{{ formatPrice(summary().period.income) }}</p>
+          <p class="font-bold text-green-300">+{{ formatPriceShort(summary().period.income) }}</p>
         </div>
         <div class="bg-white/10 rounded-lg p-2">
           <p class="opacity-70">Sorties</p>
-          <p class="font-bold text-red-300">-{{ formatPrice(summary().period.expense) }}</p>
+          <p class="font-bold text-red-300">−{{ formatPriceShort(summary().period.expense) }}</p>
         </div>
       </div>
     </div>
 
     <!-- Solde global (depuis le début) -->
-    <div class="bg-gradient-to-br from-emerald-600 to-emerald-800 text-white rounded-xl p-5 shadow-lg">
+    <div class="net-solde-card net-solde-emerald">
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-2xl opacity-80">savings</span>
-          <span class="font-semibold">Solde actuel</span>
+          <span class="font-semibold text-sm sm:text-base">Solde actuel</span>
         </div>
         <span class="text-[10px] uppercase bg-white/20 px-2 py-1 rounded-full">Depuis le début</span>
       </div>
 
-      <p class="text-3xl font-bold mb-3">{{ formatPrice(summary().global.balance) }}</p>
+      <p class="text-2xl sm:text-3xl font-bold mb-3">{{ formatPrice(summary().global.balance) }}</p>
 
       <div class="grid grid-cols-2 gap-2 text-xs">
         <div class="bg-white/10 rounded-lg p-2">
           <p class="opacity-70">Entrées</p>
-          <p class="font-bold text-green-200">+{{ formatPrice(summary().global.income) }}</p>
+          <p class="font-bold text-green-200">+{{ formatPriceShort(summary().global.income) }}</p>
         </div>
         <div class="bg-white/10 rounded-lg p-2">
           <p class="opacity-70">Sorties</p>
-          <p class="font-bold text-red-200">-{{ formatPrice(summary().global.expense) }}</p>
+          <p class="font-bold text-red-200">−{{ formatPriceShort(summary().global.expense) }}</p>
         </div>
       </div>
     </div>
   </div>
 
   <!-- ═══ Filtres ═══ -->
-  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-4 mb-4">
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-3 sm:p-4 mb-4 sm:mb-6">
 
     <!-- Chips période -->
-    <div class="flex flex-wrap gap-2 mb-4">
+    <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-4">
       @for (p of periodOptions; track p.key) {
         <button
           (click)="setPeriod(p.key)"
@@ -83,7 +84,7 @@
           [class.text-[#6B7280]]="filters().period !== p.key"
           [class.border-[#15157D]]="filters().period === p.key"
           [class.border-[#E5E7EB]]="filters().period !== p.key"
-          class="px-3 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1 transition-all hover:border-[#15157D]"
+          class="px-2.5 sm:px-3 py-1.5 rounded-lg border text-[11px] sm:text-xs font-medium flex items-center gap-1 transition-all hover:border-[#15157D]"
         >
           <span class="material-symbols-outlined text-sm">{{ p.icon }}</span>
           <span class="hidden sm:inline">{{ p.label }}</span>
@@ -94,27 +95,38 @@
 
     <!-- Dates custom -->
     @if (filters().period === 'custom') {
-      <div class="flex flex-wrap gap-3 items-end mb-4 p-3 bg-[#F5F7FA] rounded-lg">
+      <div class="grid grid-cols-2 gap-2 sm:gap-3 mb-4 p-3 bg-[#F5F7FA] rounded-lg">
         <div>
           <label class="block text-xs font-medium text-[#6B7280] mb-1">Du</label>
-          <input type="date" [(ngModel)]="filters().date_from" (change)="applyFilters()"
-            class="px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none" />
+          <input
+            type="date"
+            [(ngModel)]="filters().date_from"
+            (change)="applyFilters()"
+            class="w-full px-2 sm:px-3 py-2 border border-[#E5E7EB] rounded-lg text-xs sm:text-sm focus:border-[#15157D] outline-none"
+          />
         </div>
         <div>
           <label class="block text-xs font-medium text-[#6B7280] mb-1">Au</label>
-          <input type="date" [(ngModel)]="filters().date_to" (change)="applyFilters()"
-            class="px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none" />
+          <input
+            type="date"
+            [(ngModel)]="filters().date_to"
+            (change)="applyFilters()"
+            class="w-full px-2 sm:px-3 py-2 border border-[#E5E7EB] rounded-lg text-xs sm:text-sm focus:border-[#15157D] outline-none"
+          />
         </div>
       </div>
     }
 
     <!-- Autres filtres -->
-    <div class="flex flex-wrap items-end gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap items-end gap-3 sm:gap-4">
       @if (canSeeAllCampuses()) {
-        <div class="flex-1 min-w-[150px]">
+        <div class="w-full lg:flex-1 lg:min-w-[150px]">
           <label class="block text-xs font-medium text-[#6B7280] mb-1">Campus</label>
-          <select [(ngModel)]="filters().campus_id" (change)="applyFilters()"
-            class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none">
+          <select
+            [(ngModel)]="filters().campus_id"
+            (change)="applyFilters()"
+            class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none"
+          >
             <option [ngValue]="null">Tous les campus</option>
             @for (campus of campuses(); track campus.id) {
               <option [value]="campus.id">{{ campus.name }}</option>
@@ -123,43 +135,54 @@
         </div>
       }
 
-      <div class="flex-1 min-w-[120px]">
+      <div class="w-full lg:flex-1 lg:min-w-[120px]">
         <label class="block text-xs font-medium text-[#6B7280] mb-1">Type</label>
-        <select [(ngModel)]="filters().type" (change)="applyFilters()"
-          class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none">
+        <select
+          [(ngModel)]="filters().type"
+          (change)="applyFilters()"
+          class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none"
+        >
           <option value="">Tous</option>
           <option value="income">Entrées</option>
           <option value="expense">Sorties</option>
         </select>
       </div>
 
-      <div class="flex-1 min-w-[200px]">
+      <div class="w-full lg:flex-1 lg:min-w-[200px]">
         <label class="block text-xs font-medium text-[#6B7280] mb-1">Rechercher</label>
-        <input type="text" [(ngModel)]="filters().search" (keyup.enter)="applyFilters()"
+        <input
+          type="text"
+          [(ngModel)]="filters().search"
+          (keyup.enter)="applyFilters()"
           placeholder="Description, référence..."
-          class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none" />
+          class="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:border-[#15157D] outline-none"
+        />
       </div>
 
-      <button (click)="applyFilters()"
-        class="px-4 py-2 bg-[#15157D] text-white text-sm font-medium rounded-lg hover:bg-[#2E3192] transition-colors">
+      <button
+        (click)="applyFilters()"
+        class="w-full lg:w-auto px-4 py-2 bg-[#15157D] text-white text-sm font-medium rounded-lg hover:bg-[#2E3192] transition-colors"
+      >
         Rechercher
       </button>
-      <button (click)="resetFilters()"
-        class="px-4 py-2 text-sm text-[#6B7280] hover:text-[#15157D] hover:bg-[#E8F0FE] rounded-lg transition-colors">
-        <span class="material-symbols-outlined text-sm align-middle">refresh</span> Réinitialiser
+      <button
+        (click)="resetFilters()"
+        class="w-full lg:w-auto px-4 py-2 text-sm text-[#6B7280] hover:text-[#15157D] hover:bg-[#E8F0FE] rounded-lg transition-colors flex items-center justify-center gap-1"
+      >
+        <span class="material-symbols-outlined text-sm">refresh</span> Réinitialiser
       </button>
     </div>
   </div>
 
   <!-- ═══ Info période ═══ -->
-  <div class="bg-[#15157D] text-white rounded-xl p-3 mb-4 flex items-center justify-between">
-    <div class="flex items-center gap-2">
-      <span class="material-symbols-outlined text-lg">schedule</span>
-      <span class="text-sm font-medium">
+  <div class="bg-[#15157D] text-white rounded-xl p-3 mb-4 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="material-symbols-outlined text-lg flex-shrink-0">schedule</span>
+      <span class="text-xs sm:text-sm font-medium truncate">
         Mouvements — {{ getPeriodLabel() }}
       </span>
     </div>
-    <span class="text-sm bg-white/20 px-3 py-1 rounded-full font-bold">
+    <span class="text-xs sm:text-sm bg-white/20 px-2.5 sm:px-3 py-1 rounded-full font-bold whitespace-nowrap flex-shrink-0">
       {{ periodMeta()?.total_count || 0 }} mouvement(s)
     </span>
   </div>
@@ -167,35 +190,41 @@
   <!-- ═══ Tableau ═══ -->
   <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
     @if (loading()) {
-      <div class="flex flex-col items-center justify-center py-20">
-        <div class="w-12 h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
-        <p class="text-[#6B7280] mt-4 text-sm">Chargement...</p>
+      <div class="flex flex-col items-center justify-center py-16 sm:py-20">
+        <div class="w-10 h-10 sm:w-12 sm:h-12 border-4 border-[#E5E7EB] border-t-[#15157D] rounded-full animate-spin"></div>
+        <p class="text-[#6B7280] mt-3 sm:mt-4 text-xs sm:text-sm">Chargement...</p>
       </div>
     } @else {
       <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="w-full min-w-[900px]">
           <thead>
             <tr class="bg-[#F5F7FA] border-b border-[#E5E7EB]">
-              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Date</th>
-              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Référence</th>
-              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Description</th>
-              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Campus</th>
-              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Type</th>
-              <th class="text-right px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Montant</th>
+              <th class="text-left px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Date</th>
+              <th class="text-left px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Référence</th>
+              <th class="text-left px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Description</th>
+              <th class="text-left px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Campus</th>
+              <th class="text-left px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Type</th>
+              <th class="text-right px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Montant</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-[#E5E7EB]">
             @for (movement of movements(); track movement.id; let i = $index) {
               <tr class="hover:bg-[#F5F7FA] transition-colors animate-fade-in-up"
                 [style.animation-delay]="(0.1 + (i * 0.03)) + 's'">
-                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ formatDate(movement.created_at) }}</td>
-                <td class="px-6 py-4">
-                  <span class="font-mono text-xs text-[#15157D]">{{ movement.reference }}</span>
+                <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-[#6B7280] whitespace-nowrap">
+                  {{ formatDate(movement.created_at) }}
                 </td>
-                <td class="px-6 py-4 text-sm text-[#0B1C30]">{{ movement.description }}</td>
-                <td class="px-6 py-4 text-sm text-[#6B7280]">{{ movement.campus?.name || '-' }}</td>
-                <td class="px-6 py-4">
-                  <span class="px-2.5 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1"
+                <td class="px-4 sm:px-6 py-3 sm:py-4">
+                  <span class="font-mono text-xs text-[#15157D] whitespace-nowrap">{{ movement.reference }}</span>
+                </td>
+                <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-[#0B1C30] max-w-[200px] truncate">
+                  {{ movement.description }}
+                </td>
+                <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-[#6B7280]">
+                  {{ movement.campus?.name || '-' }}
+                </td>
+                <td class="px-4 sm:px-6 py-3 sm:py-4">
+                  <span class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium inline-flex items-center gap-1 whitespace-nowrap"
                     [class.bg-green-100]="movement.type === 'income'"
                     [class.text-green-700]="movement.type === 'income'"
                     [class.bg-red-100]="movement.type === 'expense'"
@@ -206,8 +235,8 @@
                     {{ movement.type === 'income' ? 'Entrée' : 'Sortie' }}
                   </span>
                 </td>
-                <td class="px-6 py-4 text-right">
-                  <span class="text-sm font-semibold"
+                <td class="px-4 sm:px-6 py-3 sm:py-4 text-right">
+                  <span class="text-xs sm:text-sm font-semibold whitespace-nowrap"
                     [class.text-green-600]="movement.type === 'income'"
                     [class.text-red-600]="movement.type === 'expense'">
                     {{ movement.type === 'income' ? '+' : '-' }}{{ formatPrice(movement.amount) }}
@@ -218,7 +247,7 @@
               <tr>
                 <td colspan="6" class="text-center py-12 text-[#6B7280]">
                   <span class="material-symbols-outlined text-5xl text-[#E5E7EB] block mb-3">account_balance</span>
-                  <p>Aucun mouvement pour {{ getPeriodLabel().toLowerCase() }}</p>
+                  <p class="text-sm">Aucun mouvement pour {{ getPeriodLabel().toLowerCase() }}</p>
                 </td>
               </tr>
             }
@@ -228,32 +257,40 @@
 
       <!-- Pagination -->
       @if (meta().total > 0) {
-        <div class="flex items-center justify-between px-6 py-4 border-t border-[#E5E7EB]">
-          <div class="text-sm text-[#6B7280]">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-[#E5E7EB]">
+          <div class="text-xs sm:text-sm text-[#6B7280] text-center sm:text-left">
             Affichage de <span class="font-medium">{{ meta().from }}</span> à
             <span class="font-medium">{{ meta().to }}</span> sur
             <span class="font-medium">{{ meta().total }}</span> mouvements
           </div>
           <div class="flex items-center gap-1">
-            <button (click)="goToPage(meta().current_page - 1)" [disabled]="meta().current_page === 1"
-              class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <button
+              (click)="goToPage(meta().current_page - 1)"
+              [disabled]="meta().current_page === 1"
+              class="p-1.5 sm:p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <span class="material-symbols-outlined text-sm">chevron_left</span>
             </button>
             @for (page of getPages(); track $index) {
-              @if (page === -1) { <span class="px-2 text-[#6B7280]">…</span> }
+              @if (page === -1) { <span class="px-1 text-[#6B7280]">…</span> }
               @else {
-                <button (click)="goToPage(page)"
+                <button
+                  (click)="goToPage(page)"
                   [class.bg-[#15157D]]="page === meta().current_page"
                   [class.text-white]="page === meta().current_page"
                   [class.text-[#6B7280]]="page !== meta().current_page"
                   [class.font-medium]="page === meta().current_page"
-                  class="w-8 h-8 rounded-lg hover:bg-[#F5F7FA] transition-colors text-sm">
+                  class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-[#F5F7FA] transition-colors text-xs sm:text-sm"
+                >
                   {{ page }}
                 </button>
               }
             }
-            <button (click)="goToPage(meta().current_page + 1)" [disabled]="meta().current_page === meta().last_page"
-              class="p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <button
+              (click)="goToPage(meta().current_page + 1)"
+              [disabled]="meta().current_page === meta().last_page"
+              class="p-1.5 sm:p-2 rounded-lg hover:bg-[#F5F7FA] text-[#6B7280] hover:text-[#15157D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <span class="material-symbols-outlined text-sm">chevron_right</span>
             </button>
           </div>

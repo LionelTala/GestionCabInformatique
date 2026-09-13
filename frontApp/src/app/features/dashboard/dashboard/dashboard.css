@@ -10,7 +10,7 @@
   border-radius: 1rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   color: #FFFFFF;
-  /* Fallback : couleur de fond solide si le gradient ne marche pas */
+  /* ✅ Fallback : couleur solide si le gradient ne marche pas */
   background-color: #15157D;
 }
 
@@ -20,9 +20,9 @@
   }
 }
 
-/* ✅ Couleurs unies (fallback) puis gradient pour navigateurs modernes */
+/* ✅ Couleurs unies (fallback iPhone 7) */
 .kpi-purple {
-  background-color: #15157D; /* fallback iPhone 7 */
+  background-color: #15157D;
 }
 
 .kpi-green {
@@ -141,6 +141,73 @@
 @media (min-width: 640px) {
   .kpi-label {
     font-size: 0.875rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ✅ NET SOLDE CARDS (fallback iPhone 7)
+   ═══════════════════════════════════════════════════════════ */
+.net-solde-card {
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  color: #FFFFFF;
+  /* ✅ Fallback couleur solide (iPhone 7) */
+  background-color: #1D4ED8;
+}
+
+@media (min-width: 640px) {
+  .net-solde-card {
+    padding: 1.25rem;
+  }
+}
+
+/* ✅ Couleurs unies par défaut */
+.net-solde-blue {
+  background-color: #1D4ED8;   /* Bleu uni */
+}
+
+.net-solde-amber {
+  background-color: #B45309;   /* Ambre uni */
+}
+
+/* ✅ Gradient si le navigateur supporte */
+@supports (background: linear-gradient(to bottom right, #2563EB, #1E40AF)) {
+  .net-solde-blue {
+    background: linear-gradient(to bottom right, #2563EB, #1E40AF);
+  }
+  .net-solde-amber {
+    background: linear-gradient(to bottom right, #D97706, #92400E);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ✅ EN-TÊTES DE CARTES (fallback iPhone 7)
+   ═══════════════════════════════════════════════════════════ */
+
+/* Fallback : couleurs unies (iPhone 7) */
+.header-gradient-blue    { background-color: #EFF6FF; }
+.header-gradient-green   { background-color: #F0FDF4; }
+.header-gradient-amber   { background-color: #FFFBEB; }
+.header-gradient-red     { background-color: #FEF2F2; }
+.header-gradient-purple  { background-color: #FAF5FF; }
+
+/* Gradient si le navigateur supporte */
+@supports (background: linear-gradient(to right, #EFF6FF, #FFFFFF)) {
+  .header-gradient-blue {
+    background: linear-gradient(to right, #EFF6FF, #FFFFFF);
+  }
+  .header-gradient-green {
+    background: linear-gradient(to right, #F0FDF4, #FFFFFF);
+  }
+  .header-gradient-amber {
+    background: linear-gradient(to right, #FFFBEB, #FFFFFF);
+  }
+  .header-gradient-red {
+    background: linear-gradient(to right, #FEF2F2, #FFFFFF);
+  }
+  .header-gradient-purple {
+    background: linear-gradient(to right, #FAF5FF, #FFFFFF);
   }
 }
 
