@@ -241,7 +241,7 @@ export class StudentsComponent implements OnInit {
     
     // 1. Champs standards (texte/nombre)
     const standardFields = [
-      'first_name', 'last_name', 'email', 'phone', 'residence', 'date_of_birth',
+      'first_name', 'last_name', 'email', 'phone', 'residence', 'date_of_birth','place_of_birth',
       'highest_diploma', 'diploma_year', 'parent_name', 'parent_phone'
     ];
     

@@ -222,6 +222,10 @@
                             <td class="info-value">{{ $student->date_of_birth ? \Carbon\Carbon::parse($student->date_of_birth)->format('d/m/Y') : '-' }}</td>
                         </tr>
                         <tr>
+                            <td class="info-label">Lieu de naissance :</td>
+                            <td class="info-value">{{ $student->place_of_birth ?? '-' }}</td>
+                        </tr>
+                        <tr>
                             <td class="info-label">Lieu de résidence :</td>
                             <td class="info-value">{{ $student->residence ?? '-' }}</td>
                         </tr>

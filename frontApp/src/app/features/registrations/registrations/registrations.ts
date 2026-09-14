@@ -60,6 +60,7 @@ export class Registrations implements OnInit {
   formData = signal({
     first_name: '', last_name: '', email: '', phone: '', 
     residence: '', date_of_birth: '', // ✅ residence au lieu de address
+    place_of_birth: '', 
     highest_diploma: '', diploma_year: null as number | null, // ✅ NOUVEAU
     languages: [] as string[], // ✅ NOUVEAU
     parent_name: '', parent_phone: '', 
@@ -154,6 +155,7 @@ export class Registrations implements OnInit {
       first_name: '', last_name: '', email: '', phone: '', 
       residence: '', date_of_birth: '',
       highest_diploma: '', diploma_year: null,
+      place_of_birth: '',
       languages: [],
       parent_name: '', parent_phone: '', 
       formation_id: null,
@@ -272,7 +274,7 @@ export class Registrations implements OnInit {
     
     // 1. Champs standards (texte/nombre)
     const standardFields = [
-      'first_name', 'last_name', 'email', 'phone', 'residence', 'date_of_birth',
+      'first_name', 'last_name', 'email', 'phone', 'residence', 'date_of_birth','place_of_birth',
       'highest_diploma', 'diploma_year', 'parent_name', 'parent_phone', 
       'formation_id', 'campus_id', 'academic_year_id', 'initial_payment'
     ];

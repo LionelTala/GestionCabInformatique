@@ -134,9 +134,10 @@ export class Formations implements OnInit {
     });
   }
 
-  canManage(): boolean {
-    return !!this.currentUser && ['super_admin', 'admin_global'].includes(this.currentUser.role);
-  }
+ canManage(): boolean {
+  const user = this.currentUser;
+  return user && ['super_admin', 'admin_global', 'admin_campus', 'secretary'].includes(user.role);
+}
 
   formatPrice(price: number): string {
     return price.toLocaleString('fr-FR') + ' FCFA';

@@ -89,6 +89,7 @@ class RegistrationController extends Controller
             'phone' => 'nullable|string|max:20',
             'residence' => 'nullable|string|max:255',
             'date_of_birth' => 'nullable|date',
+            'place_of_birth' => 'nullable|string|max:255',
 
             // Champs académiques
             'highest_diploma' => 'nullable|string|max:255',
@@ -149,6 +150,7 @@ class RegistrationController extends Controller
                 'phone' => $validated['phone'] ?? null,
                 'residence' => $validated['residence'] ?? null,
                 'date_of_birth' => $validated['date_of_birth'] ?? null,
+                'place_of_birth' => $validated['place_of_birth'] ?? null, 
                 'highest_diploma' => $validated['highest_diploma'] ?? null,
                 'diploma_year' => $validated['diploma_year'] ?? null,
                 'languages' => $languagesJson,
@@ -280,6 +282,7 @@ class RegistrationController extends Controller
             'phone' => 'nullable|string|max:20',
             'residence' => 'nullable|string|max:255',
             'date_of_birth' => 'nullable|date',
+            'place_of_birth' => 'nullable|string|max:255',
 
             'highest_diploma' => 'nullable|string|max:255',
             'diploma_year' => 'nullable|integer|min:1950|max:2030',
@@ -305,7 +308,7 @@ class RegistrationController extends Controller
             $student = $registration->student;
 
             $studentData = array_intersect_key($validated, array_flip([
-                'first_name', 'last_name', 'email', 'phone', 'residence', 'date_of_birth',
+                'first_name', 'last_name', 'email', 'phone', 'residence', 'date_of_birth','place_of_birth',
                 'highest_diploma', 'diploma_year', 'languages', 'parent_name', 'parent_phone'
             ]));
 

@@ -141,7 +141,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/formations', [FormationController::class, 'index']);
         Route::get('/formations/{id}', [FormationController::class, 'show']);
 
-        Route::middleware('role:super_admin,admin_global')->group(function () {
+        // ✅ APRÈS : ajout de admin_campus et secretary
+        Route::middleware('role:super_admin,admin_global,admin_campus,secretary')->group(function () {
             Route::post('/formations', [FormationController::class, 'store']);
             Route::put('/formations/{id}', [FormationController::class, 'update']);
             Route::delete('/formations/{id}', [FormationController::class, 'destroy']);
