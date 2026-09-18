@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { ToastrService } from 'ngx-toastr';
 
 export interface LaravelPaginator<T> {
   current_page: number;
@@ -73,11 +74,8 @@ export class RegistrationService {
     return this.http.post<{ data: any }>(`${this.apiUrl}/registrations`, data);
   }
 
-downloadForm(registrationId: number) {
-  return this.http.get(`${this.apiUrl}/pdf/registration/${registrationId}`, {
-    responseType: 'blob',
-    withCredentials: true,
-  });
+downloadForm(registrationId: number): string {
+  return `${this.apiUrl}/pdf/registration/${registrationId}`;
 }
 
   delete(id: number) {
@@ -85,10 +83,23 @@ downloadForm(registrationId: number) {
   }
   // registration.service.ts
 
-getFormDownloadUrl(id: number) {
-  return this.http.get<{ url: string }>(
-    `${this.apiUrl}/registrations/${id}/form-url`,
-    { withCredentials: true }
+getFormDownloadUrl(registrationId: number): string {
+  return `${this.apiUrl}/pdf/registration/${registrationId}`;
+}
+triggerDownload(url: string, toastr: ToastrService, fileLabel: string = 'fichier'): void {
+  const iframe: HTMLIFrameElement = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = url;
+  document.body.appendChild(iframe);
+
+  toastr.info(
+    `Vérifiez votre dossier "Téléchargements" dans quelques secondes.`,
+    `Téléchargement du ${fileLabel} lancé`,
+    { timeOut: 5000, closeButton: true }
   );
+
+  setTimeout(() => {
+    document.body.removeChild(iframe);
+  }, 3000);
 }
 }

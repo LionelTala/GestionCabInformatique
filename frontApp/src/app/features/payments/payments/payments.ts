@@ -253,27 +253,13 @@ export class PaymentsComponent implements OnInit {
   // ═══════════════════════════════════════════════════════════
   // ✅ TÉLÉCHARGEMENT DU REÇU (avec loader par ligne)
   // ═══════════════════════════════════════════════════════════
- downloadReceipt(paymentId: number) {
+downloadReceipt(paymentId: number) {
   this.addDownloading(paymentId);
 
-  this.paymentService.downloadReceipt(paymentId).subscribe({
-    next: (blob) => {
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `recu-${paymentId}.pdf`;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
+  const url = this.paymentService.getReceiptDownloadUrl(paymentId);
+  this.paymentService.triggerDownload(url, this.toastr, 'le reçu');
 
-      setTimeout(() => {
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        this.removeDownloading(paymentId);
-      }, 100);
-    },
-    error: (err) => this.handleDownloadError(err, paymentId),
-  });
+  setTimeout(() => this.removeDownloading(paymentId), 3000);
 }
 private handleDownloadError(err: any, paymentId: number) {
   this.removeDownloading(paymentId);

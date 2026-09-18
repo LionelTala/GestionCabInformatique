@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-
+import { ToastrService } from 'ngx-toastr';
 @Injectable({ providedIn: 'root' })
 export class PaymentService {
   private http = inject(HttpClient);
@@ -43,10 +43,23 @@ downloadReceipt(paymentId: number) {
 /**
  * ✅ Récupère l'URL signée du reçu
  */
-getReceiptDownloadUrl(paymentId: number) {
-  return this.http.get<{ url: string }>(
-    `${this.apiUrl}/payments/${paymentId}/receipt-url`,
-    { withCredentials: true }   // ✅ Nécessaire pour envoyer les cookies
+getReceiptDownloadUrl(paymentId: number): string {
+  return `${this.apiUrl}/pdf/receipt/${paymentId}`;
+}
+triggerDownload(url: string, toastr: ToastrService, fileLabel: string = 'fichier'): void {
+  const iframe: HTMLIFrameElement = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = url;
+  document.body.appendChild(iframe);
+
+  toastr.info(
+    `Vérifiez votre dossier "Téléchargements" dans quelques secondes.`,
+    `Téléchargement du ${fileLabel} lancé`,
+    { timeOut: 5000, closeButton: true }
   );
+
+  setTimeout(() => {
+    document.body.removeChild(iframe);
+  }, 3000);
 }
 }

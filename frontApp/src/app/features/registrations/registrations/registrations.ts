@@ -410,28 +410,14 @@ export class Registrations implements OnInit {
   // ═══════════════════════════════════════════════════════════
   // ✅ TÉLÉCHARGEMENT DE LA FICHE (avec loader par ligne)
   // ═══════════════════════════════════════════════════════════
- downloadForm(registration: any) {
+downloadForm(registration: any) {
   const id = registration.id;
   this.addDownloading(id);
 
-  this.registrationService.downloadForm(id).subscribe({
-    next: (blob) => {
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `fiche-inscription-${registration.student?.registration_number || id}.pdf`;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
+  const url = this.registrationService.getFormDownloadUrl(id);
+  this.registrationService.triggerDownload(url, this.toastr, 'la fiche d\'inscription');
 
-      setTimeout(() => {
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        this.removeDownloading(id);
-      }, 100);
-    },
-    error: (err) => this.handleDownloadError(err, id),
-  });
+  setTimeout(() => this.removeDownloading(id), 3000);
 }
 private handleDownloadError(err: any, paymentId: number) {
   this.removeDownloading(paymentId);
