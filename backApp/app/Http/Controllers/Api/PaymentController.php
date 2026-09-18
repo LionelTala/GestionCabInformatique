@@ -7,10 +7,10 @@ use App\Models\Payment;
 use App\Models\Registration;
 use App\Models\FinancialTransaction;
 use App\Services\ActivityLogService;
-use Illuminate\Support\Facades\URL;
 use App\Services\PDFService;
 use App\Services\PDFStorageService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -173,6 +173,21 @@ class PaymentController extends Controller
                 campusId: $registration->campus_id
             );
 
+            // ═══════════════════════════════════════════════════════
+            // ✅ GÉNÉRATION IMMÉDIATE DU PDF
+            // Le reçu est prêt AVANT que l'utilisateur ne clique sur
+            // "télécharger" : le téléchargement sera donc toujours instantané.
+            // ═══════════════════════════════════════════════════════
+            $payment->load([
+                'registration.student',
+                'registration.formation',
+                'registration.campus',
+                'registration.academicYear',
+                'registration.scolarity',
+                'campus',
+            ]);
+            $this->generateAndStoreReceipt($payment, $user);
+
             DB::commit();
         } catch (Throwable $e) {
             DB::rollBack();
@@ -287,11 +302,30 @@ class PaymentController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════════
-    // ═══ REÇU PDF ═══
+    // ═══ TÉLÉCHARGEMENT DU REÇU PDF ═══
     // ═══════════════════════════════════════════════════════════
-    public function generateReceipt(Request $request, int $id)
+    // ✅ Principe simplifié :
+    //    - receipt_path renseigné => le PDF existe déjà (généré à la
+    //      création du paiement) => on le sert directement, sans
+    //      charger aucune relation.
+    //    - receipt_path vide (cas de secours : ancien paiement créé
+    //      avant cette optimisation, ou fichier perdu) => on régénère
+    //      à la volée puis on stocke, pour que les fois suivantes
+    //      retombent dans le premier cas.
+    // ═══════════════════════════════════════════════════════════
+    public function downloadReceipt(Request $request, int $id)
     {
-        $payment = Payment::with([
+        $payment = Payment::findOrFail($id);
+
+        $this->authorize('view', $payment);
+
+        // ═══ Cas normal : le PDF a été généré à la création du paiement ═══
+        if ($payment->receipt_path && $this->pdfStorage->exists($payment->receipt_path)) {
+            return $this->streamReceipt($payment);
+        }
+
+        // ═══ Cas de secours : génération à la volée ═══
+        $payment->load([
             'registration.student',
             'registration.formation',
             'registration.campus',
@@ -299,26 +333,20 @@ class PaymentController extends Controller
             'registration.scolarity',
             'campus',
             'createdBy:id,last_name,first_name',
-        ])->findOrFail($id);
+        ]);
 
-        $this->authorize('view', $payment);
+        $this->generateAndStoreReceipt($payment, $payment->createdBy);
 
-        $user = $request->user();
+        return $this->streamReceipt($payment);
+    }
 
-        // ═══════════════════════════════════════════════════════════
-        // ✅ ÉTAPE 1 : Le fichier existe déjà ?
-        // ═══════════════════════════════════════════════════════════
-        if ($this->pdfStorage->exists($payment->receipt_path)) {
-            $content = $this->pdfStorage->get($payment->receipt_path);
-
-            return response($content)
-                ->header('Content-Type', 'application/pdf')
-                ->header('Content-Disposition', 'inline; filename="recu-' . $payment->reference . '.pdf"');
-        }
-
-        // ═══════════════════════════════════════════════════════════
-        // ✅ ÉTAPE 2 : Générer + stocker + enregistrer
-        // ═══════════════════════════════════════════════════════════
+    /**
+     * ✅ Génère le PDF du reçu, le stocke sur le disque privé,
+     * et met à jour receipt_path / receipt_generated_at.
+     * Centralise une logique auparavant dupliquée à 3 endroits.
+     */
+    private function generateAndStoreReceipt(Payment $payment, $user): void
+    {
         $qrUrl = generatePaymentQRData($payment, $payment->registration->student, $payment->registration);
 
         try {
@@ -334,92 +362,76 @@ class PaymentController extends Controller
 
         $pdfContent = $this->pdfService->generatePaymentReceipt($payment, $qrCodeBase64, $user);
 
-        $newPath = $this->pdfStorage->receiptPath($payment);
-        $this->pdfStorage->store($newPath, $pdfContent);
+        $path = $this->pdfStorage->receiptPath($payment);
+        $this->pdfStorage->store($path, $pdfContent);
 
         $payment->update([
-            'receipt_path'         => $newPath,
+            'receipt_path'         => $path,
             'receipt_generated_at' => now(),
         ]);
-
-        return response($pdfContent)
-            ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'inline; filename="recu-' . $payment->reference . '.pdf"');
     }
-    // PaymentController.php
 
-/**
- * ✅ Renvoie une URL temporaire pour télécharger le reçu
- */
-public function getReceiptDownloadUrl(Request $request, int $id)
-{
-    $payment = Payment::findOrFail($id);
-
-    $this->authorize('view', $payment);
-
-    // ✅ URL signée, valable 10 minutes
-    // Le cookie de session sera envoyé automatiquement par le navigateur
-    $url = URL::temporarySignedRoute(
-        'payments.receipt.download',
-        now()->addMinutes(10),
-        ['id' => $id]
-    );
-
-    return response()->json(['url' => $url]);
-}
-
-/**
- * ✅ Télécharge le reçu PDF
- * Protégé par la signature URL + le middleware 'web' pour les cookies
- */
-public function downloadReceipt(Request $request, int $id)
-{
-    $payment = Payment::with([
-        'registration.student',
-        'registration.formation',
-        'registration.campus',
-        'registration.academicYear',
-        'registration.scolarity',
-        'campus',
-        'createdBy:id,last_name,first_name',
-    ])->findOrFail($id);
-
-    // ═══ ÉTAPE 1 : Cache ═══
-    if ($this->pdfStorage->exists($payment->receipt_path)) {
+    /**
+     * ✅ Sert le PDF déjà stocké sur le disque privé.
+     *
+     * NOTE : $this->pdfStorage->get() charge tout le fichier en mémoire
+     * avant de le renvoyer. Si PDFStorageService utilise un disque LOCAL
+     * (config/filesystems.php => 'private' => driver 'local'), remplace
+     * idéalement cette méthode par un vrai streaming, par exemple :
+     *
+     *   return Storage::disk('private')->download(
+     *       $payment->receipt_path,
+     *       'recu-' . $payment->reference . '.pdf'
+     *   );
+     *
+     * Storage::download() utilise en interne response()->file(), qui
+     * stream le fichier directement depuis le disque sans jamais le
+     * charger entièrement en mémoire PHP — plus rapide et plus léger,
+     * surtout sur un hébergement mutualisé à mémoire limitée.
+     * Montre-moi PDFStorageService si tu veux que je fasse ce
+     * changement précisément avec ton implémentation actuelle.
+     */
+    private function streamReceipt(Payment $payment): Response
+    {
         $content = $this->pdfStorage->get($payment->receipt_path);
 
         return response($content)
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'attachment; filename="recu-' . $payment->reference . '.pdf"');   // ✅ attachment
+            ->header('Content-Disposition', 'attachment; filename="recu-' . $payment->reference . '.pdf"');
     }
 
-    // ═══ ÉTAPE 2 : Générer ═══
-    $qrUrl = generatePaymentQRData($payment, $payment->registration->student, $payment->registration);
+    // ═══════════════════════════════════════════════════════════
+    // ═══ APERÇU PDF (affichage inline, ex: prévisualisation) ═══
+    // ═══════════════════════════════════════════════════════════
+    public function generateReceipt(Request $request, int $id)
+    {
+        $payment = Payment::findOrFail($id);
+        $this->authorize('view', $payment);
 
-    try {
-        $qrCodeRaw = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
-            ->size(100)
-            ->errorCorrection('H')
-            ->generate($qrUrl);
-        $qrCodeBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrCodeRaw);
-    } catch (\Exception $e) {
-        $qrCodeBase64 = null;
-        Log::error('QR Code generation failed: ' . $e->getMessage());
+        if ($payment->receipt_path && $this->pdfStorage->exists($payment->receipt_path)) {
+            $content = $this->pdfStorage->get($payment->receipt_path);
+
+            return response($content)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'inline; filename="recu-' . $payment->reference . '.pdf"');
+        }
+
+        $payment->load([
+            'registration.student',
+            'registration.formation',
+            'registration.campus',
+            'registration.academicYear',
+            'registration.scolarity',
+            'campus',
+            'createdBy:id,last_name,first_name',
+        ]);
+
+        $this->generateAndStoreReceipt($payment, $request->user());
+
+        $content = $this->pdfStorage->get($payment->receipt_path);
+
+        return response($content)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="recu-' . $payment->reference . '.pdf"');
     }
-
-    $user = $payment->createdBy;
-    $pdfContent = $this->pdfService->generatePaymentReceipt($payment, $qrCodeBase64, $user);
-
-    $newPath = $this->pdfStorage->receiptPath($payment);
-    $this->pdfStorage->store($newPath, $pdfContent);
-
-    $payment->update([
-        'receipt_path'         => $newPath,
-        'receipt_generated_at' => now(),
-    ]);
-
-    return response($pdfContent)
-        ->header('Content-Type', 'application/pdf')
-        ->header('Content-Disposition', 'attachment; filename="recu-' . $payment->reference . '.pdf"');   // ✅ attachment
-}
 }

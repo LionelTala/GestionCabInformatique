@@ -27,10 +27,10 @@ export class PaymentService {
  * @param url — URL signée retournée par getReceiptDownloadUrl()
  * @returns Observable<Blob>
  */
-downloadFromUrl(url: string) {
-  return this.http.get(url, {
+downloadReceipt(paymentId: number) {
+  return this.http.get(`${this.apiUrl}/pdf/receipt/${paymentId}`, {
     responseType: 'blob',
-    withCredentials: true,   // ✅ Envoie les cookies de session
+    withCredentials: true,
   });
 }
 

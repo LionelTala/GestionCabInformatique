@@ -73,9 +73,8 @@ export class RegistrationService {
     return this.http.post<{ data: any }>(`${this.apiUrl}/registrations`, data);
   }
 
-// registration.service.ts
-downloadFromUrl(url: string) {
-  return this.http.get(url, {
+downloadForm(registrationId: number) {
+  return this.http.get(`${this.apiUrl}/pdf/registration/${registrationId}`, {
     responseType: 'blob',
     withCredentials: true,
   });

@@ -410,46 +410,46 @@ export class Registrations implements OnInit {
   // ═══════════════════════════════════════════════════════════
   // ✅ TÉLÉCHARGEMENT DE LA FICHE (avec loader par ligne)
   // ═══════════════════════════════════════════════════════════
-  downloadForm(registration: any) {
-    const id = registration.id;
+ downloadForm(registration: any) {
+  const id = registration.id;
+  this.addDownloading(id);
 
-    // ✅ Active le loader pour cette ligne
-    this.addDownloading(id);
+  this.registrationService.downloadForm(id).subscribe({
+    next: (blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `fiche-inscription-${registration.student?.registration_number || id}.pdf`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
 
-    // ═══ ÉTAPE 1 : Récupérer l'URL signée ═══
-    this.registrationService.getFormDownloadUrl(id).subscribe({
-      next: (res) => {
-        // ═══ ÉTAPE 2 : Télécharger le PDF ═══
-        this.registrationService.downloadFromUrl(res.url).subscribe({
-          next: (blob) => {
-            // ═══ ÉTAPE 3 : Déclencher le téléchargement natif ═══
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `fiche-inscription-${registration.student?.registration_number || id}.pdf`;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-
-            setTimeout(() => {
-              document.body.removeChild(link);
-              window.URL.revokeObjectURL(url);
-              this.removeDownloading(id);
-            }, 100);
-          },
-          error: () => {
-            this.toastr.error('Erreur lors du téléchargement de la fiche');
-            this.removeDownloading(id);
-          },
-        });
-      },
-      error: (err) => {
-        this.toastr.error(err.error?.message || 'Erreur lors de la préparation de la fiche');
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
         this.removeDownloading(id);
-      },
-    });
-  }
+      }, 100);
+    },
+    error: (err) => this.handleDownloadError(err, id),
+  });
+}
+private handleDownloadError(err: any, paymentId: number) {
+  this.removeDownloading(paymentId);
 
+  // Si le corps de l'erreur est un Blob JSON, on le relit pour extraire le vrai message
+  if (err.error instanceof Blob && err.error.type === 'application/json') {
+    err.error.text().then((text: string) => {
+      try {
+        const parsed = JSON.parse(text);
+        this.toastr.error(parsed.message || 'Erreur lors du téléchargement du reçu');
+      } catch {
+        this.toastr.error('Erreur lors du téléchargement du reçu');
+      }
+    });
+  } else {
+    this.toastr.error('Erreur lors du téléchargement du reçu');
+  }
+}
   // === UTILITAIRES ===
   getStatusLabel(status: string): string {
     const labels: Record<string, string> = {

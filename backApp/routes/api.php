@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\FinancialMovementController;
 use App\Http\Controllers\Api\AttestationController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\DashboardController;
+ 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -30,18 +31,19 @@ Route::get('/user', function (Request $request) {
 // → Middleware 'web' pour les cookies de session
 // → Middleware 'signed' pour la signature d'URL
 // ═══════════════════════════════════════════════════════════
-Route::middleware(['web', 'signed'])->group(function () {
+
+
+// ═══════════════════════════════════════════════════════════
+// API v1
+// ═══════════════════════════════════════════════════════════
+Route::prefix('v1')->group(function () {
+    Route::middleware([ 'auth:sanctum'])->group(function () {
     Route::get('/pdf/receipt/{id}', [PaymentController::class, 'downloadReceipt'])
         ->name('payments.receipt.download');
 
     Route::get('/pdf/registration/{id}', [RegistrationController::class, 'downloadForm'])
         ->name('registrations.form.download');
 });
-
-// ═══════════════════════════════════════════════════════════
-// API v1
-// ═══════════════════════════════════════════════════════════
-Route::prefix('v1')->group(function () {
 
     // ─────────────────────────────────────────────────────
     // BROADCASTING AUTH (Pusher)

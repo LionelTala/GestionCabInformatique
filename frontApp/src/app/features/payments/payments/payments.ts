@@ -253,45 +253,45 @@ export class PaymentsComponent implements OnInit {
   // ═══════════════════════════════════════════════════════════
   // ✅ TÉLÉCHARGEMENT DU REÇU (avec loader par ligne)
   // ═══════════════════════════════════════════════════════════
-  downloadReceipt(paymentId: number) {
-    // ✅ Active le loader pour cette ligne
-    this.addDownloading(paymentId);
+ downloadReceipt(paymentId: number) {
+  this.addDownloading(paymentId);
 
-    // ═══ ÉTAPE 1 : Récupérer l'URL signée ═══
-    this.paymentService.getReceiptDownloadUrl(paymentId).subscribe({
-      next: (res) => {
-        // ═══ ÉTAPE 2 : Télécharger le PDF via HttpClient ═══
-        this.paymentService.downloadFromUrl(res.url).subscribe({
-          next: (blob) => {
-            // ═══ ÉTAPE 3 : Déclencher le téléchargement natif ═══
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `recu-${paymentId}.pdf`;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
+  this.paymentService.downloadReceipt(paymentId).subscribe({
+    next: (blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `recu-${paymentId}.pdf`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
 
-            // Nettoyage
-            setTimeout(() => {
-              document.body.removeChild(link);
-              window.URL.revokeObjectURL(url);
-              this.removeDownloading(paymentId);
-            }, 100);
-          },
-          error: () => {
-            this.toastr.error('Erreur lors du téléchargement du reçu');
-            this.removeDownloading(paymentId);
-          },
-        });
-      },
-      error: (err) => {
-        this.toastr.error(err.error?.message || 'Erreur lors de la préparation du reçu');
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
         this.removeDownloading(paymentId);
-      },
-    });
-  }
+      }, 100);
+    },
+    error: (err) => this.handleDownloadError(err, paymentId),
+  });
+}
+private handleDownloadError(err: any, paymentId: number) {
+  this.removeDownloading(paymentId);
 
+  // Si le corps de l'erreur est un Blob JSON, on le relit pour extraire le vrai message
+  if (err.error instanceof Blob && err.error.type === 'application/json') {
+    err.error.text().then((text: string) => {
+      try {
+        const parsed = JSON.parse(text);
+        this.toastr.error(parsed.message || 'Erreur lors du téléchargement du reçu');
+      } catch {
+        this.toastr.error('Erreur lors du téléchargement du reçu');
+      }
+    });
+  } else {
+    this.toastr.error('Erreur lors du téléchargement du reçu');
+  }
+}
   // ═══ UTILITAIRES ═══
   formatPrice(price: number) { return (price || 0).toLocaleString('fr-FR') + ' FCFA'; }
 
