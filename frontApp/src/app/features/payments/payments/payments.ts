@@ -25,7 +25,9 @@ export class PaymentsComponent implements OnInit {
   periodMeta = signal<any>({ total_amount: 0, total_count: 0, date_from: '', date_to: '' });
   loading = signal(false);
   submitting = signal(false);
-  downloading = signal(false); // ✅ loader global comme registrations
+
+  // ✅ Loader PAR LIGNE : Set d'IDs en cours de téléchargement
+  downloadingIds = signal<Set<number>>(new Set<number>());
 
   campuses = this.campusService.getCampuses();
   currentUser = this.auth.getUser();
@@ -64,6 +66,23 @@ export class PaymentsComponent implements OnInit {
   ngOnInit() {
     this.campusService.loadCampuses();
     this.loadPayments(1);
+  }
+
+  // ═══ HELPERS LOADER ═══
+  isDownloading(id: number): boolean {
+    return this.downloadingIds().has(id);
+  }
+
+  private addDownloading(id: number) {
+    this.downloadingIds.update(s => new Set(s).add(id));
+  }
+
+  private removeDownloading(id: number) {
+    this.downloadingIds.update(s => {
+      const next = new Set(s);
+      next.delete(id);
+      return next;
+    });
   }
 
   // ═══ CHARGEMENT & FILTRES ═══
@@ -231,24 +250,45 @@ export class PaymentsComponent implements OnInit {
     return user && ['super_admin', 'admin_global', 'admin_campus'].includes(user.role);
   }
 
-  // ═══ TÉLÉCHARGEMENT / OUVERTURE PDF — ✅ MÊME LOGIQUE QUE downloadForm ═══
+  // ═══════════════════════════════════════════════════════════
+  // ✅ TÉLÉCHARGEMENT DU REÇU (avec loader par ligne)
+  // ═══════════════════════════════════════════════════════════
   downloadReceipt(paymentId: number) {
-    this.downloading.set(true);
-    this.paymentService.downloadReceipt(paymentId).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        // ✅ OUVRIR DIRECTEMENT DANS UN NOUVEL ONGLET
-        window.open(url, '_blank');
-        // Nettoyer après un délai
-        setTimeout(() => {
-          window.URL.revokeObjectURL(url);
-          this.downloading.set(false);
-        }, 1000);
+    // ✅ Active le loader pour cette ligne
+    this.addDownloading(paymentId);
+
+    // ═══ ÉTAPE 1 : Récupérer l'URL signée ═══
+    this.paymentService.getReceiptDownloadUrl(paymentId).subscribe({
+      next: (res) => {
+        // ═══ ÉTAPE 2 : Télécharger le PDF via HttpClient ═══
+        this.paymentService.downloadFromUrl(res.url).subscribe({
+          next: (blob) => {
+            // ═══ ÉTAPE 3 : Déclencher le téléchargement natif ═══
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `recu-${paymentId}.pdf`;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+
+            // Nettoyage
+            setTimeout(() => {
+              document.body.removeChild(link);
+              window.URL.revokeObjectURL(url);
+              this.removeDownloading(paymentId);
+            }, 100);
+          },
+          error: () => {
+            this.toastr.error('Erreur lors du téléchargement du reçu');
+            this.removeDownloading(paymentId);
+          },
+        });
       },
       error: (err) => {
-        this.toastr.error(err.error?.message || 'Erreur lors de la génération du PDF');
-        this.downloading.set(false);
-      }
+        this.toastr.error(err.error?.message || 'Erreur lors de la préparation du reçu');
+        this.removeDownloading(paymentId);
+      },
     });
   }
 

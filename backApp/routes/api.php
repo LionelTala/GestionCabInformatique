@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\CashMovementController;
 use App\Http\Controllers\Api\FinancialMovementController;
 use App\Http\Controllers\Api\AttestationController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\DashboardController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +24,19 @@ use Illuminate\Support\Facades\Route;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+// ═══════════════════════════════════════════════════════════
+// ✅ ROUTES PDF SIGNÉES (hors préfixe API)
+// → Middleware 'web' pour les cookies de session
+// → Middleware 'signed' pour la signature d'URL
+// ═══════════════════════════════════════════════════════════
+Route::middleware(['web', 'signed'])->group(function () {
+    Route::get('/pdf/receipt/{id}', [PaymentController::class, 'downloadReceipt'])
+        ->name('payments.receipt.download');
+
+    Route::get('/pdf/registration/{id}', [RegistrationController::class, 'downloadForm'])
+        ->name('registrations.form.download');
+});
 
 // ═══════════════════════════════════════════════════════════
 // API v1
@@ -72,17 +86,21 @@ Route::prefix('v1')->group(function () {
     // ─────────────────────────────────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
 
-        Route::prefix('profile')->group(function () {
-        Route::get('/',              [ProfileController::class, 'show']);
-        Route::put('/',              [ProfileController::class, 'update']);
-        Route::patch('/password',    [ProfileController::class, 'updatePassword']);
-    });
-
         // ═══ AUTH ═══
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
-            Route::get('/dashboard/stats', [App\Http\Controllers\Api\DashboardController::class, 'getStats']);
 
+        // ═══ DASHBOARD ═══
+        Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
+
+        // ═══════════════════════════════════════════════════
+        // ═══ PROFIL ═══
+        // ═══════════════════════════════════════════════════
+        Route::prefix('profile')->group(function () {
+            Route::get('/',              [ProfileController::class, 'show']);
+            Route::put('/',              [ProfileController::class, 'update']);
+            Route::patch('/password',    [ProfileController::class, 'updatePassword']);
+        });
 
         // ═══════════════════════════════════════════════════
         // ═══ UTILISATEURS ═══
@@ -95,10 +113,11 @@ Route::prefix('v1')->group(function () {
             Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
         });
 
-
-        // Dans le groupe auth:sanctum
+        // ═══════════════════════════════════════════════════
+        // ═══ ATTESTATIONS ═══
+        // ═══════════════════════════════════════════════════
         Route::prefix('attestations')->group(function () {
-            // ✅ Routes statiques d'abord
+            // ✅ Routes statiques AVANT dynamiques
             Route::get('/search-students', [AttestationController::class, 'searchStudents']);
             Route::get('/stats',           [AttestationController::class, 'stats']);
 
@@ -141,7 +160,6 @@ Route::prefix('v1')->group(function () {
         Route::get('/formations', [FormationController::class, 'index']);
         Route::get('/formations/{id}', [FormationController::class, 'show']);
 
-        // ✅ APRÈS : ajout de admin_campus et secretary
         Route::middleware('role:super_admin,admin_global,admin_campus,secretary')->group(function () {
             Route::post('/formations', [FormationController::class, 'store']);
             Route::put('/formations/{id}', [FormationController::class, 'update']);
@@ -156,16 +174,20 @@ Route::prefix('v1')->group(function () {
         Route::get('/registrations/{id}', [RegistrationController::class, 'show']);
         Route::post('/registrations', [RegistrationController::class, 'store']);
         Route::delete('/registrations/{id}', [RegistrationController::class, 'destroy']);
-        Route::get('/registrations/{id}/form', [RegistrationController::class, 'generateForm']);
         Route::get('/registrations/stats/{campusId}', [RegistrationController::class, 'stats']);
+
+        // ✅ Génération de l'URL signée (authentifié par cookie)
+        Route::get('/registrations/{id}/form-url', [RegistrationController::class, 'getFormDownloadUrl']);
 
         // ═══════════════════════════════════════════════════
         // ═══ PAIEMENTS ═══
         // ═══════════════════════════════════════════════════
         Route::get('/payments', [PaymentController::class, 'index']);
         Route::get('/payments/search', [PaymentController::class, 'searchStudents']);
-        Route::get('/payments/{id}/receipt', [PaymentController::class, 'generateReceipt']);
         Route::delete('/payments/{id}', [PaymentController::class, 'destroy']);
+
+        // ✅ Génération de l'URL signée (authentifié par cookie)
+        Route::get('/payments/{id}/receipt-url', [PaymentController::class, 'getReceiptDownloadUrl']);
 
         // Ajouter un versement à une inscription
         Route::post('/registrations/{registrationId}/payments', [PaymentController::class, 'store']);
@@ -173,7 +195,7 @@ Route::prefix('v1')->group(function () {
         // ═══════════════════════════════════════════════════
         // ═══ ÉTUDIANTS ═══
         // ═══════════════════════════════════════════════════
-        // Rapports (avant /{id} pour éviter conflit)
+        // Rapports (AVANT /{id} pour éviter conflit)
         Route::get('/students/scholarship-report', [StudentController::class, 'scholarshipReport']);
         Route::get('/students/scholarship-report/pdf', [StudentController::class, 'generateScholarshipReport']);
         Route::get('/students/simple-list', [StudentController::class, 'simpleList']);
@@ -214,7 +236,7 @@ Route::prefix('v1')->group(function () {
         });
 
         // ═══════════════════════════════════════════════════
-        // ═══ MOUVEMENTS FINANCIERS (Bilan scolarité) ═══
+        // ═══ MOUVEMENTS FINANCIERS ═══
         // ═══════════════════════════════════════════════════
         Route::get('/financial-movements',        [FinancialMovementController::class, 'index']);
         Route::get('/financial-movements/report', [FinancialMovementController::class, 'generateReport']);

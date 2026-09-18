@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Registration;
 use App\Models\FinancialTransaction;
 use App\Services\ActivityLogService;
+use Illuminate\Support\Facades\URL;
 use App\Services\PDFService;
 use App\Services\PDFStorageService;
 use Illuminate\Http\Request;
@@ -345,4 +346,80 @@ class PaymentController extends Controller
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', 'inline; filename="recu-' . $payment->reference . '.pdf"');
     }
+    // PaymentController.php
+
+/**
+ * ✅ Renvoie une URL temporaire pour télécharger le reçu
+ */
+public function getReceiptDownloadUrl(Request $request, int $id)
+{
+    $payment = Payment::findOrFail($id);
+
+    $this->authorize('view', $payment);
+
+    // ✅ URL signée, valable 10 minutes
+    // Le cookie de session sera envoyé automatiquement par le navigateur
+    $url = URL::temporarySignedRoute(
+        'payments.receipt.download',
+        now()->addMinutes(10),
+        ['id' => $id]
+    );
+
+    return response()->json(['url' => $url]);
+}
+
+/**
+ * ✅ Télécharge le reçu PDF
+ * Protégé par la signature URL + le middleware 'web' pour les cookies
+ */
+public function downloadReceipt(Request $request, int $id)
+{
+    $payment = Payment::with([
+        'registration.student',
+        'registration.formation',
+        'registration.campus',
+        'registration.academicYear',
+        'registration.scolarity',
+        'campus',
+        'createdBy:id,last_name,first_name',
+    ])->findOrFail($id);
+
+    // ═══ ÉTAPE 1 : Cache ═══
+    if ($this->pdfStorage->exists($payment->receipt_path)) {
+        $content = $this->pdfStorage->get($payment->receipt_path);
+
+        return response($content)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="recu-' . $payment->reference . '.pdf"');   // ✅ attachment
+    }
+
+    // ═══ ÉTAPE 2 : Générer ═══
+    $qrUrl = generatePaymentQRData($payment, $payment->registration->student, $payment->registration);
+
+    try {
+        $qrCodeRaw = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
+            ->size(100)
+            ->errorCorrection('H')
+            ->generate($qrUrl);
+        $qrCodeBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrCodeRaw);
+    } catch (\Exception $e) {
+        $qrCodeBase64 = null;
+        Log::error('QR Code generation failed: ' . $e->getMessage());
+    }
+
+    $user = $payment->createdBy;
+    $pdfContent = $this->pdfService->generatePaymentReceipt($payment, $qrCodeBase64, $user);
+
+    $newPath = $this->pdfStorage->receiptPath($payment);
+    $this->pdfStorage->store($newPath, $pdfContent);
+
+    $payment->update([
+        'receipt_path'         => $newPath,
+        'receipt_generated_at' => now(),
+    ]);
+
+    return response($pdfContent)
+        ->header('Content-Type', 'application/pdf')
+        ->header('Content-Disposition', 'attachment; filename="recu-' . $payment->reference . '.pdf"');   // ✅ attachment
+}
 }

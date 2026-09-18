@@ -20,12 +20,33 @@ export class PaymentService {
     return this.http.post(`${this.apiUrl}/registrations/${registrationId}/payments`, data);
   }
 
-  downloadReceipt(paymentId: number) {
-    return this.http.get(`${this.apiUrl}/payments/${paymentId}/receipt`, { responseType: 'blob' });
-  }
+// payment.service.ts
+
+/**
+ * ✅ Télécharge un reçu PDF
+ * @param url — URL signée retournée par getReceiptDownloadUrl()
+ * @returns Observable<Blob>
+ */
+downloadFromUrl(url: string) {
+  return this.http.get(url, {
+    responseType: 'blob',
+    withCredentials: true,   // ✅ Envoie les cookies de session
+  });
+}
 
   // ✅ NOUVEAU : Suppression d'un paiement (avec contre-écriture côté back)
   deletePayment(paymentId: number) {
     return this.http.delete(`${this.apiUrl}/payments/${paymentId}`);
   }
+  // payment.service.ts
+
+/**
+ * ✅ Récupère l'URL signée du reçu
+ */
+getReceiptDownloadUrl(paymentId: number) {
+  return this.http.get<{ url: string }>(
+    `${this.apiUrl}/payments/${paymentId}/receipt-url`,
+    { withCredentials: true }   // ✅ Nécessaire pour envoyer les cookies
+  );
+}
 }

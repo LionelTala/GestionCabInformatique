@@ -8,7 +8,7 @@ import { FormationService } from '../../../core/services/formation';
 import { CampusService } from '../../../core/services/campus';
 import { AcademicYearService } from '../../../core/services/academic-year';
 import { Auth } from '../../../core/services/auth';
-
+import { ImageCompressionService, ACCEPTED_IMAGE_TYPES, ACCEPTED_IMAGE_EXTENSIONS } from '../../../core/services/image-compression.service';
 @Component({
   imports: [CommonModule, FormsModule, RouterModule],
   selector: 'app-registrations',
@@ -22,6 +22,7 @@ export class Registrations implements OnInit {
   private academicYearService = inject(AcademicYearService);
   private auth = inject(Auth);
   private toastr = inject(ToastrService);
+  private imageCompression = inject(ImageCompressionService);
 
   // === DONNÉES ===
   registrations = this.registrationService.getRegistrations();
@@ -34,7 +35,13 @@ export class Registrations implements OnInit {
   currentUser = this.auth.getUser();
 
   submitting = signal(false);
-  downloading = signal(false);
+
+  // ✅ Loader PAR LIGNE (Set des IDs en cours de téléchargement)
+  downloadingIds = signal<Set<number>>(new Set<number>());
+
+  // ✅ Loader pour la compression d'image
+  compressing = signal(false);
+
   selectedFile = signal<File | null>(null);
   photoPreview = signal<string | null>(null);
 
@@ -47,29 +54,31 @@ export class Registrations implements OnInit {
     status: '' as string,
   });
 
-  // === OPTIONS POUR LES NOUVEAUX CHAMPS ===
+  // === OPTIONS ===
   languageOptions = [
     { value: 'francais', label: 'Français' },
     { value: 'anglais', label: 'Anglais' },
     { value: 'autre', label: 'Autre' },
   ];
-  diplomaOptions = ['Aucun', 'BEPC / Brevet','Probatoire', 'Baccalauréat', 'BTS / DUT', 'Licence', 'Master', 'Doctorat', 'Autre'];
+  diplomaOptions = ['Aucun', 'BEPC / Brevet', 'Probatoire', 'Baccalauréat', 'BTS / DUT', 'Licence', 'Master', 'Doctorat', 'Autre'];
+  acceptedImageExtensions = ACCEPTED_IMAGE_EXTENSIONS;
+
 
   // === MODAL CRÉATION ===
   showModal = signal(false);
   formData = signal({
-    first_name: '', last_name: '', email: '', phone: '', 
-    residence: '', date_of_birth: '', // ✅ residence au lieu de address
-    place_of_birth: '', 
-    highest_diploma: '', diploma_year: null as number | null, // ✅ NOUVEAU
-    languages: [] as string[], // ✅ NOUVEAU
-    parent_name: '', parent_phone: '', 
+    first_name: '', last_name: '', email: '', phone: '',
+    residence: '', date_of_birth: '',
+    place_of_birth: '',
+    highest_diploma: '', diploma_year: null as number | null,
+    languages: [] as string[],
+    parent_name: '', parent_phone: '',
     formation_id: null as number | null,
-    campus_id: null as number | null, 
+    campus_id: null as number | null,
     academic_year_id: null as number | null,
     initial_payment: null as number | null,
-    has_promo: false, // ✅ NOUVEAU
-    custom_tuition: null as number | null, // ✅ NOUVEAU
+    has_promo: false,
+    custom_tuition: null as number | null,
   });
 
   errors = signal({
@@ -79,7 +88,6 @@ export class Registrations implements OnInit {
   selectedFormationId = signal<number | null>(null);
   selectedFormation = computed(() => this.formations().find(f => f.id === this.selectedFormationId()));
 
-  // === CALCUL DU MONTANT AFFICHÉ (Avec ou sans promo) ===
   displayedTuition = computed(() => {
     const f = this.formData();
     if (f.has_promo && f.custom_tuition !== null && f.custom_tuition > 0) {
@@ -105,6 +113,23 @@ export class Registrations implements OnInit {
       this.formData.update(d => ({ ...d, campus_id: user.campus_id }));
     }
     this.loadRegistrations(1);
+  }
+
+  // ═══ HELPERS LOADER ═══
+  isDownloading(id: number): boolean {
+    return this.downloadingIds().has(id);
+  }
+
+  private addDownloading(id: number) {
+    this.downloadingIds.update(s => new Set(s).add(id));
+  }
+
+  private removeDownloading(id: number) {
+    this.downloadingIds.update(s => {
+      const next = new Set(s);
+      next.delete(id);
+      return next;
+    });
   }
 
   // === CHARGEMENT & FILTRES ===
@@ -147,20 +172,20 @@ export class Registrations implements OnInit {
     return pages;
   }
 
-  // === ACTIONS MODAL CRÉATION ===
+  // === MODAL CRÉATION ===
   openCreateModal() {
     const user = this.currentUser;
     const defaultYear = this.academicYears().find(y => y.is_current);
     this.formData.set({
-      first_name: '', last_name: '', email: '', phone: '', 
+      first_name: '', last_name: '', email: '', phone: '',
       residence: '', date_of_birth: '',
       highest_diploma: '', diploma_year: null,
       place_of_birth: '',
       languages: [],
-      parent_name: '', parent_phone: '', 
+      parent_name: '', parent_phone: '',
       formation_id: null,
       campus_id: user && ['admin_campus', 'secretary'].includes(user.role) ? user.campus_id : null,
-      academic_year_id: defaultYear?.id || null, 
+      academic_year_id: defaultYear?.id || null,
       initial_payment: null,
       has_promo: false,
       custom_tuition: null,
@@ -179,39 +204,71 @@ export class Registrations implements OnInit {
     this.photoPreview.set(null);
   }
 
-  onFormationChange(formationId: number) { 
-    this.selectedFormationId.set(formationId); 
+  onFormationChange(formationId: number) {
+    this.selectedFormationId.set(formationId);
   }
 
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.selectedFile.set(file);
-      const reader = new FileReader();
-      reader.onload = () => this.photoPreview.set(reader.result as string);
-      reader.readAsDataURL(file);
-    }
+  // ✅ Compression d'image côté frontend
+  async onFileSelected(event: any) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // ✅ Validation via le service (accepte webp, heic, etc.)
+  if (!this.imageCompression.isAcceptedImage(file)) {
+    this.toastr.error('Format non supporté. Utilisez JPG, PNG, WebP, HEIC...');
+    return;
   }
 
-  // === GESTION DES NOUVEAUX CHAMPS ===
+  // ✅ Limite absolue de sécurité (10 Mo)
+  if (file.size > 10 * 1024 * 1024) {
+    this.toastr.error('Fichier trop volumineux (max 10 Mo)');
+    return;
+  }
+
+  this.compressing.set(true);
+
+  try {
+    const compressedFile = await this.imageCompression.compress(file, {
+      maxWidth: 1200,
+      maxHeight: 1200,
+      quality: 0.85,
+    });
+
+    console.log(`📸 Compression: ${(file.size / 1024).toFixed(0)} Ko → ${(compressedFile.size / 1024).toFixed(0)} Ko`);
+
+    this.selectedFile.set(compressedFile);
+
+    const reader = new FileReader();
+    reader.onload = () => this.photoPreview.set(reader.result as string);
+    reader.readAsDataURL(compressedFile);
+
+  } catch (error) {
+    console.error('Erreur compression:', error);
+    this.toastr.error('Erreur lors du traitement de l\'image');
+  } finally {
+    this.compressing.set(false);
+  }
+}
+
+  // === NOUVEAUX CHAMPS ===
   toggleLanguage(lang: string) {
     this.formData.update(d => {
       const langs = [...d.languages];
       const idx = langs.indexOf(lang);
       if (idx > -1) {
-        langs.splice(idx, 1); // Retirer si déjà coché
+        langs.splice(idx, 1);
       } else {
-        langs.push(lang); // Ajouter sinon
+        langs.push(lang);
       }
       return { ...d, languages: langs };
     });
   }
 
   togglePromo() {
-    this.formData.update(d => ({ 
-      ...d, 
+    this.formData.update(d => ({
+      ...d,
       has_promo: !d.has_promo,
-      custom_tuition: !d.has_promo ? null : d.custom_tuition // Reset le montant si on décoche
+      custom_tuition: !d.has_promo ? null : d.custom_tuition
     }));
   }
 
@@ -262,7 +319,7 @@ export class Registrations implements OnInit {
            this.validateCustomTuition();
   }
 
-  // === SOUMISSION DU FORMULAIRE (Mise à jour cruciale pour FormData) ===
+  // === SOUMISSION ===
   onSubmit() {
     if (!this.validateForm()) {
       this.toastr.warning('Veuillez corriger les erreurs du formulaire');
@@ -271,14 +328,13 @@ export class Registrations implements OnInit {
 
     const data = this.formData();
     const formData = new FormData();
-    
-    // 1. Champs standards (texte/nombre)
+
     const standardFields = [
-      'first_name', 'last_name', 'email', 'phone', 'residence', 'date_of_birth','place_of_birth',
-      'highest_diploma', 'diploma_year', 'parent_name', 'parent_phone', 
+      'first_name', 'last_name', 'email', 'phone', 'residence', 'date_of_birth', 'place_of_birth',
+      'highest_diploma', 'diploma_year', 'parent_name', 'parent_phone',
       'formation_id', 'campus_id', 'academic_year_id', 'initial_payment'
     ];
-    
+
     standardFields.forEach(key => {
       const value = data[key as keyof typeof data];
       if (value !== null && value !== undefined && value !== '') {
@@ -286,17 +342,14 @@ export class Registrations implements OnInit {
       }
     });
 
-    // 2. Langues (Tableau)
     data.languages.forEach(lang => {
       formData.append('languages[]', lang);
     });
 
-    // 3. Promo (Uniquement si activée)
     if (data.has_promo && data.custom_tuition !== null) {
       formData.append('custom_tuition', data.custom_tuition.toString());
     }
 
-    // 4. Photo
     if (this.selectedFile()) {
       formData.append('photo', this.selectedFile()!);
     }
@@ -354,27 +407,46 @@ export class Registrations implements OnInit {
     });
   }
 
-   // === TÉLÉCHARGEMENT / OUVERTURE PDF ===
+  // ═══════════════════════════════════════════════════════════
+  // ✅ TÉLÉCHARGEMENT DE LA FICHE (avec loader par ligne)
+  // ═══════════════════════════════════════════════════════════
   downloadForm(registration: any) {
-    this.downloading.set(true);
-    this.registrationService.downloadForm(registration.id).subscribe({
-      next: (blob) => {
-        // Créer une URL objet à partir du blob
-        const url = window.URL.createObjectURL(blob);
-        
-        // ✅ OUVRIR DIRECTEMENT DANS UN NOUVEL ONGLET
-        window.open(url, '_blank');
-        
-        // Nettoyer l'URL après un court délai pour laisser le temps au navigateur d'ouvrir l'onglet
-        setTimeout(() => {
-          window.URL.revokeObjectURL(url);
-          this.downloading.set(false);
-        }, 1000);
+    const id = registration.id;
+
+    // ✅ Active le loader pour cette ligne
+    this.addDownloading(id);
+
+    // ═══ ÉTAPE 1 : Récupérer l'URL signée ═══
+    this.registrationService.getFormDownloadUrl(id).subscribe({
+      next: (res) => {
+        // ═══ ÉTAPE 2 : Télécharger le PDF ═══
+        this.registrationService.downloadFromUrl(res.url).subscribe({
+          next: (blob) => {
+            // ═══ ÉTAPE 3 : Déclencher le téléchargement natif ═══
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `fiche-inscription-${registration.student?.registration_number || id}.pdf`;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+
+            setTimeout(() => {
+              document.body.removeChild(link);
+              window.URL.revokeObjectURL(url);
+              this.removeDownloading(id);
+            }, 100);
+          },
+          error: () => {
+            this.toastr.error('Erreur lors du téléchargement de la fiche');
+            this.removeDownloading(id);
+          },
+        });
       },
       error: (err) => {
-        this.toastr.error(err.error?.message || 'Erreur lors de la génération du PDF');
-        this.downloading.set(false);
-      }
+        this.toastr.error(err.error?.message || 'Erreur lors de la préparation de la fiche');
+        this.removeDownloading(id);
+      },
     });
   }
 

@@ -6,10 +6,10 @@ import {
   inject,
   OnInit,
   OnDestroy,
-  ChangeDetectionStrategy,      // ⚡
-  ChangeDetectorRef,             // ⚡
-  ElementRef,                    // ⚡ click outside
-  HostListener,                  // ⚡ click outside
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  ElementRef,
+  HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
@@ -18,10 +18,9 @@ import { ToastrService } from 'ngx-toastr';
 import { Auth } from '../../core/services/auth';
 import { LoadingService } from '../../core/services/loading';
 import { AcademicYearService, AcademicYear } from '../../core/services/academic-year';
-import { PusherService } from '../../core/services/pusher';
 import { NotificationService } from '../../core/services/notification';
 import { filter } from 'rxjs/operators';
-import { CampusService } from '../../core/services/campus'; // Adapte le chemin
+import { CampusService } from '../../core/services/campus';
 
 
 interface NavItem {
@@ -36,19 +35,17 @@ interface NavItem {
   selector: 'app-layout',
   styleUrl: './layout.css',
   templateUrl: './layout.html',
-  changeDetection: ChangeDetectionStrategy.OnPush, // ⚡ #1 cause de latence
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Layout implements OnInit, OnDestroy {
   private auth = inject(Auth);
   private router = inject(Router);
   private toastr = inject(ToastrService);
   private academicYearService = inject(AcademicYearService);
-  private pusher = inject(PusherService);
   private notificationService = inject(NotificationService);
-  private cdr = inject(ChangeDetectorRef);      // ⚡
-  private el = inject(ElementRef);   
-    private campusService = inject(CampusService);
-           // ⚡ click outside
+  private cdr = inject(ChangeDetectorRef);
+  private el = inject(ElementRef);
+  private campusService = inject(CampusService);
   loadingService = inject(LoadingService);
 
   sidebarOpen = signal(false);
@@ -62,23 +59,23 @@ export class Layout implements OnInit, OnDestroy {
   notifications = this.notificationService.getNotifications();
   unreadCount = this.notificationService.getUnreadCount();
 
-   navItems: NavItem[] = [
-  { label: 'Tableau de bord', route: '/dashboard', icon: 'grid_view' },
-  { label: 'Campus', route: '/campus', icon: 'apartment', roles: ['super_admin', 'admin_global'] },
-  { label: 'Utilisateurs', route: '/users', icon: 'group', roles: ['super_admin', 'admin_global', 'admin_campus'] },
-  { label: 'Formations', route: '/formations', icon: 'school', roles: ['super_admin', 'admin_global', 'admin_campus', 'secretary'] },
-  { label: 'Inscriptions', route: '/registrations', icon: 'person_add', roles: ['super_admin', 'admin_global', 'admin_campus', 'secretary'] },
-  { label: 'Paiements', route: '/payments', icon: 'payments', roles: ['super_admin', 'admin_global', 'admin_campus', 'secretary'] },
-  { label: 'Étudiants', route: '/students', icon: 'school', roles: ['super_admin', 'admin_global', 'admin_campus', 'secretary'] },
+  navItems: NavItem[] = [
+    { label: 'Tableau de bord', route: '/dashboard', icon: 'grid_view' },
+    { label: 'Campus', route: '/campus', icon: 'apartment', roles: ['super_admin', 'admin_global'] },
+    { label: 'Utilisateurs', route: '/users', icon: 'group', roles: ['super_admin', 'admin_global', 'admin_campus'] },
+    { label: 'Formations', route: '/formations', icon: 'school', roles: ['super_admin', 'admin_global', 'admin_campus', 'secretary'] },
+    { label: 'Inscriptions', route: '/registrations', icon: 'person_add', roles: ['super_admin', 'admin_global', 'admin_campus', 'secretary'] },
+    { label: 'Paiements', route: '/payments', icon: 'payments', roles: ['super_admin', 'admin_global', 'admin_campus', 'secretary'] },
+    { label: 'Étudiants', route: '/students', icon: 'school', roles: ['super_admin', 'admin_global', 'admin_campus', 'secretary'] },
 
-  // ✅ Caisse (remplace "Dépenses")
-  { label: 'Caisse', route: '/cash-movements', icon: 'point_of_sale', roles: ['super_admin', 'admin_global', 'admin_campus', 'secretary'] },
+    // ✅ Caisse (remplace "Dépenses")
+    { label: 'Caisse', route: '/cash-movements', icon: 'point_of_sale', roles: ['super_admin', 'admin_global', 'admin_campus', 'secretary'] },
 
-  { label: 'Mouvements', route: '/financial-movements', icon: 'account_balance', roles: ['super_admin', 'admin_global', 'admin_campus'] },
-  { label: 'Journal', route: '/logs', icon: 'history', roles: ['super_admin', 'admin_global', 'admin_campus'] },
-  { label: 'Années scolaires', route: '/academic-years', icon: 'calendar_month', roles: ['super_admin', 'admin_global'] },
-  { label: 'Attestations', route: '/attestations', icon: 'description', roles: ['super_admin', 'admin_global', 'admin_campus', 'secretary'] },
-];
+    { label: 'Mouvements', route: '/financial-movements', icon: 'account_balance', roles: ['super_admin', 'admin_global', 'admin_campus'] },
+    { label: 'Journal', route: '/logs', icon: 'history', roles: ['super_admin', 'admin_global', 'admin_campus'] },
+    { label: 'Années scolaires', route: '/academic-years', icon: 'calendar_month', roles: ['super_admin', 'admin_global'] },
+    { label: 'Attestations', route: '/attestations', icon: 'description', roles: ['super_admin', 'admin_global', 'admin_campus', 'secretary'] },
+  ];
 
   visibleNavItems = computed(() => {
     const u = this.user();
@@ -101,38 +98,29 @@ export class Layout implements OnInit, OnDestroy {
     secretaire: 'Secrétaire',
   };
 
- ngOnInit() {
-  const u = this.auth.getUser();
-      this.campusService.loadCampuses();
+  ngOnInit() {
+    const u = this.auth.getUser();
+    this.campusService.loadCampuses();
 
+    if (u) {
+      this.user.set(u);
+    } else {
+      this.auth.me().subscribe({
+        next: (freshUser: any) => {
+          this.user.set(freshUser);
+        },
+        error: () => {} // errorInterceptor gère la redirection
+      });
+    }
 
-  if (u) {
-    this.user.set(u);
-    this.setupAfterUser(u);
-  } else {
-    this.auth.me().subscribe({
-      next: (freshUser: any) => {
-        this.user.set(freshUser);
-        this.setupAfterUser(freshUser);
-      },
-      error: () => {} // errorInterceptor gère la redirection
+    this.loadYears();
+
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd)
+    ).subscribe((e: any) => {
+      this.currentRoute.set(e.urlAfterRedirects || e.url);
     });
   }
-
-  this.loadYears();
-
-  this.router.events.pipe(
-    filter(e => e instanceof NavigationEnd)
-  ).subscribe((e: any) => {
-    this.currentRoute.set(e.urlAfterRedirects || e.url);
-  });
-}
-
-private setupAfterUser(u: any) {
-  if (u && u.role !== 'secretary') {
-    this.listenPusherNotifications();
-  }
-}
 
   ngOnDestroy() {}
 
@@ -165,28 +153,6 @@ private setupAfterUser(u: any) {
     });
   }
 
-  // === NOTIFICATIONS PUSHER ===
-  listenPusherNotifications() {
-    this.pusher.listenNewRegistration((data) => {
-      this.notificationService.addNotification({
-        id: Date.now(),
-        user_id: this.user()?.id || 0,
-        type: data.type || 'new_registration',
-        title: data.title || 'Nouvelle inscription',
-        message: data.message,
-        link: data.link || null,
-        is_read: false,
-        created_at: data.created_at || new Date().toISOString()
-      });
-
-      this.toastr.info(data.message, data.title, {
-        timeOut: 4000,
-        closeButton: true,
-        positionClass: 'toast-top-right',
-      });
-    });
-  }
-
   // ⚡ Notifications chargées SEULEMENT au clic sur la cloche
   toggleNotifications() {
     const willOpen = !this.showNotifications();
@@ -198,19 +164,19 @@ private setupAfterUser(u: any) {
 
   // ⚡ Fermer dropdown au clic dehors
   @HostListener('document:click', ['$event.target'])
-onClickOutside(target: EventTarget | null) {
-  if (this.showNotifications() && target instanceof HTMLElement && !this.el.nativeElement.querySelector('.notif-zone')?.contains(target)) {
-    this.showNotifications.set(false);
+  onClickOutside(target: EventTarget | null) {
+    if (this.showNotifications() && target instanceof HTMLElement && !this.el.nativeElement.querySelector('.notif-zone')?.contains(target)) {
+      this.showNotifications.set(false);
+    }
   }
-}
 
-markAllAsRead() {
-  this.notificationService.markAllAsRead().subscribe({ error: () => {} });
-}
+  markAllAsRead() {
+    this.notificationService.markAllAsRead().subscribe({ error: () => {} });
+  }
 
-markAsRead(id: number) {
-  this.notificationService.markAsRead(id).subscribe({ error: () => {} });
-}
+  markAsRead(id: number) {
+    this.notificationService.markAsRead(id).subscribe({ error: () => {} });
+  }
 
   // === SIDEBAR ===
   toggleSidebar() {
@@ -233,10 +199,11 @@ markAsRead(id: number) {
   getRoleLabel(role: string): string {
     return this.roleLabels[role] || role;
   }
+
   canManageYears(): boolean {
-  const user = this.user();
-  return !!user && ['super_admin', 'admin_global'].includes(user.role);
-}
+    const user = this.user();
+    return !!user && ['super_admin', 'admin_global'].includes(user.role);
+  }
 
   getInitials(): string {
     const u = this.user();

@@ -176,18 +176,19 @@
                     </button>
 
                     <!-- Imprimer -->
-                    <button
-                      (click)="downloadForm(registration)"
-                      [disabled]="downloading()"
-                      class="p-1.5 sm:p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6C3CE1] hover:text-[#5A2CB8] transition-colors disabled:opacity-50"
-                      title="Ouvrir la fiche PDF"
-                    >
-                      @if (downloading()) {
-                        <span class="w-4 h-4 sm:w-5 sm:h-5 border-2 border-[#6C3CE1] border-t-transparent rounded-full animate-spin inline-block"></span>
-                      } @else {
-                        <span class="material-symbols-outlined text-lg sm:text-xl">picture_as_pdf</span>
-                      }
-                    </button>
+                    <!-- Imprimer avec loader par ligne -->
+<button
+  (click)="downloadForm(registration)"
+  [disabled]="isDownloading(registration.id)"
+  class="p-1.5 sm:p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6C3CE1] hover:text-[#5A2CB8] transition-colors disabled:opacity-50"
+  title="Télécharger la fiche PDF"
+>
+  @if (isDownloading(registration.id)) {
+    <span class="w-4 h-4 sm:w-5 sm:h-5 border-2 border-[#6C3CE1] border-t-transparent rounded-full animate-spin inline-block"></span>
+  } @else {
+    <span class="material-symbols-outlined text-lg sm:text-xl">picture_as_pdf</span>
+  }
+</button>
 
                     <!-- Supprimer -->
                     @if (canManage()) {
@@ -397,10 +398,20 @@
                 <input
                   type="file"
                   (change)="onFileSelected($event)"
-                  accept="image/*"
-                  class="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-[#E5E7EB] rounded-xl text-xs sm:text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-2 sm:file:px-4 file:rounded-lg sm:file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#E8F0FE] file:text-[#15157D] hover:file:bg-[#D1E4FF]"
+                  [accept]="acceptedImageExtensions"
+                  [disabled]="compressing()"
+                  class="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-[#E5E7EB] rounded-xl text-xs sm:text-sm focus:border-[#15157D] focus:ring-4 focus:ring-[#15157D]/10 outline-none transition-all file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-2 sm:file:px-4 file:rounded-lg sm:file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#E8F0FE] file:text-[#15157D] hover:file:bg-[#D1E4FF] disabled:opacity-50"
                 />
-                @if (photoPreview()) {
+
+                <!-- ✅ Indicateur de compression -->
+                @if (compressing()) {
+                  <div class="flex items-center gap-2 text-xs sm:text-sm text-[#6B7280] mt-2">
+                    <span class="w-4 h-4 border-2 border-[#15157D] border-t-transparent rounded-full animate-spin"></span>
+                    Optimisation de l'image en cours...
+                  </div>
+                }
+
+                @if (photoPreview() && !compressing()) {
                   <div class="mt-2">
                     <img [src]="photoPreview()" class="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover border border-[#E5E7EB]" alt="Aperçu photo">
                   </div>

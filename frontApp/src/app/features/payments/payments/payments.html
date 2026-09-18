@@ -157,15 +157,19 @@
                 <td class="px-6 py-4 text-right">
                   <div class="flex items-center justify-end gap-1">
                     <!-- ✅ Reçu avec loader global (même logique que registrations) -->
-                    <button (click)="downloadReceipt(p.id)" [disabled]="downloading()"
-                      class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6C3CE1] hover:text-[#5A2CB8] transition-colors disabled:opacity-50"
-                      title="Ouvrir le reçu PDF">
-                      @if (downloading()) {
-                        <span class="w-5 h-5 border-2 border-[#6C3CE1] border-t-transparent rounded-full animate-spin inline-block"></span>
-                      } @else {
-                        <span class="material-symbols-outlined text-xl">picture_as_pdf</span>
-                      }
-                    </button>
+                    <!-- ✅ Reçu avec loader par ligne -->
+                  <button
+                    (click)="downloadReceipt(p.id)"
+                    [disabled]="isDownloading(p.id)"
+                    class="p-2 rounded-lg hover:bg-[#E8F0FE] text-[#6C3CE1] hover:text-[#5A2CB8] transition-colors disabled:opacity-50"
+                    title="Télécharger le reçu"
+                  >
+                    @if (isDownloading(p.id)) {
+                      <span class="w-5 h-5 border-2 border-[#6C3CE1] border-t-transparent rounded-full animate-spin inline-block"></span>
+                    } @else {
+                      <span class="material-symbols-outlined text-xl">picture_as_pdf</span>
+                    }
+                  </button>
 
                     <!-- Supprimer -->
                     @if (canDelete()) {

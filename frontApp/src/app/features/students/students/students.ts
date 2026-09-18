@@ -8,6 +8,8 @@ import { CampusService } from '../../../core/services/campus';
 import { AcademicYearService } from '../../../core/services/academic-year';
 import { Auth } from '../../../core/services/auth';
 import { environment } from '../../../../environments/environment';
+import { ImageCompressionService, ACCEPTED_IMAGE_EXTENSIONS } from '../../../core/services/image-compression.service';
+
 
 @Component({
   selector: 'app-students',
@@ -25,6 +27,8 @@ export class StudentsComponent implements OnInit {
   private academicYearService = inject(AcademicYearService);
   private auth = inject(Auth);
   private toastr = inject(ToastrService);
+  private imageCompression = inject(ImageCompressionService);
+
 
   students = this.studentService.getStudents();
   meta = this.studentService.getMeta();
@@ -39,6 +43,9 @@ export class StudentsComponent implements OnInit {
   submitting = signal(false);
   photoFile = signal<File | null>(null);
   photoPreview = signal<string>('');
+
+  // ✅ Loader pour la compression d'image
+  compressing = signal(false);
 
   // ✅ OPTIONS POUR LES NOUVEAUX CHAMPS
   languageOptions = [
@@ -55,6 +62,8 @@ export class StudentsComponent implements OnInit {
     formation_id: null as number | null,
     search: '',
   });
+  acceptedImageExtensions = ACCEPTED_IMAGE_EXTENSIONS;
+
 
   // Modal Détails
   showDetailModal = signal(false);
@@ -144,25 +153,30 @@ export class StudentsComponent implements OnInit {
   }
 
   // === MODAL ÉDITION ===
- openEditModal() {
-  const details = this.studentDetails();
-  if (!details) return;
+  openEditModal() {
+    const details = this.studentDetails();
+    if (!details) return;
 
-  this.editFormData.set({ 
-    ...details.student,
-    languages: this.parseLanguages(details.student.languages) // ✅ Réutilise la méthode
-  });
-  this.editErrors.set({ first_name: '', last_name: '', email: '' });
-  
-  if (details.student.photo) {
-    this.photoPreview.set(this.getPhotoUrl(details.student.id));
-  } else {
-    this.photoPreview.set('assets/default-avatar.png');
+    this.editFormData.set({
+      ...details.student,
+      languages: this.parseLanguages(details.student.languages) // ✅ Réutilise la méthode
+    });
+    this.editErrors.set({ first_name: '', last_name: '', email: '' });
+
+    // ✅ Aperçu de la photo existante ou avatar par défaut
+    if (details.student.photo) {
+      this.photoPreview.set(this.getPhotoUrl(details.student.id));
+    } else {
+      this.photoPreview.set('assets/default-avatar.png');
+    }
+    this.photoFile.set(null);
+
+    // ✅ Reset l'input HTML (au cas où un fichier aurait été choisi avant)
+    const input = document.getElementById('photoInput') as HTMLInputElement;
+    if (input) input.value = '';
+
+    this.showEditModal.set(true);
   }
-  this.photoFile.set(null);
-  
-  this.showEditModal.set(true);
-}
 
   getPhotoUrl(studentId: number): string {
     return `${this.baseUrl}/students/${studentId}/photo`;
@@ -172,6 +186,12 @@ export class StudentsComponent implements OnInit {
     this.showEditModal.set(false);
     this.editFormData.set(null);
     this.editErrors.set({ first_name: '', last_name: '', email: '' });
+    this.photoFile.set(null);
+    this.photoPreview.set('');
+
+    // ✅ Reset l'input HTML
+    const input = document.getElementById('photoInput') as HTMLInputElement;
+    if (input) input.value = '';
   }
 
   validateEditForm(): boolean {
@@ -202,13 +222,50 @@ export class StudentsComponent implements OnInit {
     return valid;
   }
 
-  onPhotoSelected(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (file) {
-      this.photoFile.set(file);
+  // ✅ Sélection et compression de la photo
+  async onPhotoSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    // ✅ Validation via le service (accepte webp, heic, etc.)
+    if (!this.imageCompression.isAcceptedImage(file)) {
+      const ext = file.name.split('.').pop()?.toUpperCase() || 'inconnu';
+      this.toastr.error(`Format "${ext}" non supporté. Utilisez JPG, PNG, WebP, HEIC...`);
+      input.value = '';
+      return;
+    }
+
+    // ✅ Limite absolue de sécurité (10 Mo)
+    if (file.size > 10 * 1024 * 1024) {
+      this.toastr.error('Fichier trop volumineux (max 10 Mo)');
+      input.value = '';
+      return;
+    }
+
+    this.compressing.set(true);
+
+    try {
+      const compressedFile = await this.imageCompression.compress(file, {
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 0.85,
+      });
+
+      console.log(`📸 Compression: ${(file.size / 1024).toFixed(0)} Ko → ${(compressedFile.size / 1024).toFixed(0)} Ko`);
+
+      this.photoFile.set(compressedFile);
+
       const reader = new FileReader();
       reader.onload = () => this.photoPreview.set(reader.result as string);
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(compressedFile);
+
+    } catch (error) {
+      console.error('Erreur compression:', error);
+      this.toastr.error('Erreur lors du traitement de l\'image');
+    } finally {
+      this.compressing.set(false);
+      input.value = ''; // ✅ permet de re-sélectionner le même fichier
     }
   }
 
@@ -238,13 +295,13 @@ export class StudentsComponent implements OnInit {
 
     const formData = new FormData();
     formData.append('_method', 'PUT'); // ✅ Spoofing pour Laravel
-    
+
     // 1. Champs standards (texte/nombre)
     const standardFields = [
       'first_name', 'last_name', 'email', 'phone', 'residence', 'date_of_birth','place_of_birth',
       'highest_diploma', 'diploma_year', 'parent_name', 'parent_phone'
     ];
-    
+
     standardFields.forEach(key => {
       const value = data[key];
       // On envoie seulement si la valeur n'est pas null/undefined/chaîne vide
@@ -430,18 +487,19 @@ export class StudentsComponent implements OnInit {
     const classes: Record<string, string> = { paid: 'bg-green-100 text-green-700', partial: 'bg-yellow-100 text-yellow-700', unpaid: 'bg-red-100 text-red-700' };
     return classes[status] || 'bg-gray-100 text-gray-700';
   }
+
   // ✅ Parse languages (string JSON, tableau, ou null) → toujours un tableau
-parseLanguages(languages: any): string[] {
-  if (!languages) return [];
-  if (Array.isArray(languages)) return languages;
-  if (typeof languages === 'string') {
-    try {
-      const parsed = JSON.parse(languages);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
+  parseLanguages(languages: any): string[] {
+    if (!languages) return [];
+    if (Array.isArray(languages)) return languages;
+    if (typeof languages === 'string') {
+      try {
+        const parsed = JSON.parse(languages);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
     }
+    return [];
   }
-  return [];
-}
 }

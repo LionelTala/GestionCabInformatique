@@ -73,11 +73,23 @@ export class RegistrationService {
     return this.http.post<{ data: any }>(`${this.apiUrl}/registrations`, data);
   }
 
-  downloadForm(id: number) {
-    return this.http.get(`${this.apiUrl}/registrations/${id}/form`, { responseType: 'blob' });
-  }
+// registration.service.ts
+downloadFromUrl(url: string) {
+  return this.http.get(url, {
+    responseType: 'blob',
+    withCredentials: true,
+  });
+}
 
   delete(id: number) {
     return this.http.delete(`${this.apiUrl}/registrations/${id}`);
   }
+  // registration.service.ts
+
+getFormDownloadUrl(id: number) {
+  return this.http.get<{ url: string }>(
+    `${this.apiUrl}/registrations/${id}/form-url`,
+    { withCredentials: true }
+  );
+}
 }
