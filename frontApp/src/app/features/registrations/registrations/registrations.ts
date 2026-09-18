@@ -53,7 +53,7 @@ export class Registrations implements OnInit {
     { value: 'anglais', label: 'Anglais' },
     { value: 'autre', label: 'Autre' },
   ];
-  diplomaOptions = ['Aucun', 'BEPC / Brevet', 'Baccalauréat', 'BTS / DUT', 'Licence', 'Master', 'Doctorat', 'Autre'];
+  diplomaOptions = ['Aucun', 'BEPC / Brevet','Probatoire', 'Baccalauréat', 'BTS / DUT', 'Licence', 'Master', 'Doctorat', 'Autre'];
 
   // === MODAL CRÉATION ===
   showModal = signal(false);

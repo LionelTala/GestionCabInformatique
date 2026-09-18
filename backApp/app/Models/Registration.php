@@ -24,6 +24,8 @@ class Registration extends Model
         'qr_code_hash',
         'created_by',
         'qr_signature',
+        'pdf_path',           
+    'pdf_generated_at',
     ];
 
     protected function casts(): array
@@ -33,6 +35,7 @@ class Registration extends Model
             'initial_payment' => 'decimal:2',
             'amount_paid'     => 'decimal:2',
             'balance'         => 'decimal:2',
+            'pdf_generated_at' => 'datetime',
         ];
     }
 

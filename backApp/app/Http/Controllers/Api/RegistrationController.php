@@ -10,6 +10,7 @@ use App\Models\FinancialTransaction;
 use App\Models\CashMovement;
 use App\Models\Formation;
 use App\Services\ActivityLogService;
+use App\Services\PDFStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -21,7 +22,10 @@ class RegistrationController extends Controller
         private \App\Services\QRCodeService $qrCodeService,
         private \App\Services\PDFService $pdfService,
         private ActivityLogService $activityLogService,
+        private PDFStorageService $pdfStorage,
     ) {}
+
+    // ... (index, show, store — inchangés)
 
     // ═══════════════════════════════════════════════════════════
     // ═══ LISTE ═══
@@ -41,12 +45,10 @@ class RegistrationController extends Controller
             'scolarity:id,registration_id,tuition_fees,amount_paid,balance,status'
         ]);
 
-        // ✅ Scope par rôle (obligatoire pour les listes)
         if (in_array($user->role, ['admin_campus', 'secretary'])) {
             $query->where('campus_id', $user->campus_id);
         }
 
-        // Filtres
         foreach (['campus_id', 'formation_id', 'academic_year_id', 'status'] as $filter) {
             if ($request->has($filter)) {
                 $query->where($filter, $request->$filter);
@@ -67,7 +69,6 @@ class RegistrationController extends Controller
             'student', 'formation', 'campus', 'academicYear', 'payments', 'scolarity'
         ])->findOrFail($id);
 
-        // ✅ Policy : vérifie l'accès au campus
         $this->authorize('view', $registration);
 
         return response()->json(['data' => $registration]);
@@ -91,7 +92,6 @@ class RegistrationController extends Controller
             'date_of_birth' => 'nullable|date',
             'place_of_birth' => 'nullable|string|max:255',
 
-            // Champs académiques
             'highest_diploma' => 'nullable|string|max:255',
             'diploma_year' => 'nullable|integer|min:1950|max:2030',
             'languages' => 'nullable|array',
@@ -104,13 +104,11 @@ class RegistrationController extends Controller
             'academic_year_id' => 'required|exists:academic_years,id',
             'initial_payment' => 'nullable|numeric|min:0',
 
-            // Montant promo
             'custom_tuition' => 'nullable|numeric|min:0',
 
             'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        // ✅ Sécurité : secrétaire / admin_campus → forcé sur leur campus
         $campusId = in_array($user->role, ['admin_campus', 'secretary'])
             ? $user->campus_id
             : $validated['campus_id'];
@@ -118,12 +116,10 @@ class RegistrationController extends Controller
         $formation = Formation::findOrFail($validated['formation_id']);
         $initialPayment = $validated['initial_payment'] ?? 0;
 
-        // ✅ Si pas de promo → custom_tuition = prix de la formation
         $finalTuition = !empty($validated['custom_tuition'])
             ? (float) $validated['custom_tuition']
             : (float) $formation->tuition_fees;
 
-        // Génération matricule
         $year = now()->format('y');
         $abbreviation = $formation->abbreviation;
         do {
@@ -138,7 +134,6 @@ class RegistrationController extends Controller
                 $languagesJson = json_encode($validated['languages']);
             }
 
-            // 1. Création Étudiant
             $student = Student::create([
                 'campus_id' => $campusId,
                 'registration_number' => $registrationNumber,
@@ -150,7 +145,7 @@ class RegistrationController extends Controller
                 'phone' => $validated['phone'] ?? null,
                 'residence' => $validated['residence'] ?? null,
                 'date_of_birth' => $validated['date_of_birth'] ?? null,
-                'place_of_birth' => $validated['place_of_birth'] ?? null, 
+                'place_of_birth' => $validated['place_of_birth'] ?? null,
                 'highest_diploma' => $validated['highest_diploma'] ?? null,
                 'diploma_year' => $validated['diploma_year'] ?? null,
                 'languages' => $languagesJson,
@@ -164,7 +159,6 @@ class RegistrationController extends Controller
                 $student->save();
             }
 
-            // 2. Création Inscription
             $registration = Registration::create([
                 'student_id' => $student->id,
                 'campus_id' => $campusId,
@@ -176,7 +170,6 @@ class RegistrationController extends Controller
                 'created_by' => $user->id,
             ]);
 
-            // 3. Scolarity
             $amountPaid = $initialPayment;
             $balance = max(0, $finalTuition - $amountPaid);
             $status = $amountPaid <= 0 ? 'unpaid' : ($amountPaid >= $finalTuition ? 'paid' : 'partial');
@@ -191,7 +184,6 @@ class RegistrationController extends Controller
                 'status' => $status,
             ]);
 
-            // 4. FinancialTransaction
             if ($initialPayment > 0) {
                 FinancialTransaction::create([
                     'registration_id' => $registration->id,
@@ -206,7 +198,6 @@ class RegistrationController extends Controller
                 ]);
             }
 
-            // 5. QR Code
             $qrData = [
                 'matricule'         => $student->registration_number,
                 'name'              => $student->first_name . ' ' . $student->last_name,
@@ -228,7 +219,6 @@ class RegistrationController extends Controller
             $qrUrl = generateSecureQRData('registration', $qrData);
             $qrCodeBase64 = $this->qrCodeService->generate($qrUrl);
 
-            // 6. Log
             $logChanges = 'Nouvelle inscription : ' . $student->first_name . ' ' . $student->last_name . ' — ' . $formation->name;
             if ($finalTuition < $formation->tuition_fees) {
                 $logChanges .= ' (PROMO appliquée : ' . number_format($finalTuition, 0, ',', ' ') . ' FCFA au lieu de ' . number_format($formation->tuition_fees, 0, ',', ' ') . ' FCFA)';
@@ -270,7 +260,6 @@ class RegistrationController extends Controller
     {
         $registration = Registration::with(['student', 'payments', 'scolarity'])->findOrFail($id);
 
-        // ✅ Policy : accès campus selon rôle
         $this->authorize('update', $registration);
 
         $user = $request->user();
@@ -318,7 +307,6 @@ class RegistrationController extends Controller
 
             $student->update($studentData);
 
-            // Recalcul custom_tuition
             $newFormationId = $validated['formation_id'] ?? $registration->formation_id;
             $formation = Formation::find($newFormationId);
 
@@ -329,7 +317,6 @@ class RegistrationController extends Controller
 
             $registration->update($registrationData);
 
-            // Recalcul Scolarity
             $scolarity = $registration->scolarity;
             if ($scolarity) {
                 $newTuition = (float) $registration->custom_tuition;
@@ -343,6 +330,16 @@ class RegistrationController extends Controller
                     'balance' => $newBalance,
                     'status' => $newStatus,
                 ]);
+            }
+
+            // ✅ Invalider la fiche d'inscription (les données ont changé)
+            $this->pdfStorage->deleteRegistrationPDF($registration);
+            $registration->update(['pdf_path' => null, 'pdf_generated_at' => null]);
+
+            // ✅ Invalider tous les reçus liés (le solde a changé, les infos étudiant aussi)
+            foreach ($registration->payments as $payment) {
+                $this->pdfStorage->deleteReceiptPDF($payment);
+                $payment->update(['receipt_path' => null, 'receipt_generated_at' => null]);
             }
 
             $this->activityLogService->log(
@@ -384,10 +381,6 @@ class RegistrationController extends Controller
             'scolarity',
         ])->findOrFail($id);
 
-        // ✅ Policy : 
-        // - Secrétaire : uniquement les inscriptions qu'ELLE a créées
-        // - Admin campus : tout son campus
-        // - Admin global : tout
         $this->authorize('delete', $registration);
 
         $user = $request->user();
@@ -398,13 +391,11 @@ class RegistrationController extends Controller
             $studentName    = $student->first_name . ' ' . $student->last_name;
             $matricule      = $student->registration_number;
 
-            // 1. Calcul du montant total à retirer du solde
             $initialPayment = (float) $registration->initial_payment;
             $payments       = $registration->payments()->where('status', 'confirmed')->get();
             $paymentsSum    = (float) $payments->sum('amount');
             $totalToRefund  = $initialPayment + $paymentsSum;
 
-            // 2. Log AVANT suppression
             $changesLog = 'Suppression DÉFINITIVE de l\'inscription de ' . $studentName
                         . ' (Matricule: ' . $matricule . ')';
             if ($totalToRefund > 0) {
@@ -431,7 +422,6 @@ class RegistrationController extends Controller
                 campusId: $registration->campus_id
             );
 
-            // 3. Contre-écriture : versement initial
             if ($initialPayment > 0) {
                 FinancialTransaction::create([
                     'registration_id' => $registration->id,
@@ -446,7 +436,6 @@ class RegistrationController extends Controller
                 ]);
             }
 
-            // 4. Contre-écriture : chaque paiement
             foreach ($payments as $payment) {
                 FinancialTransaction::create([
                     'registration_id' => $registration->id,
@@ -460,9 +449,15 @@ class RegistrationController extends Controller
                     'reference'       => 'DEL-' . $payment->reference,
                     'created_by'      => $user->id,
                 ]);
+
+                // ✅ Supprimer le PDF du reçu du disque
+                $this->pdfStorage->deleteReceiptPDF($payment);
             }
 
-            // 5. Suppression définitive (ordre FK)
+            // ✅ Supprimer la fiche d'inscription du disque
+            $this->pdfStorage->deleteRegistrationPDF($registration);
+
+            // ✅ Suppression définitive en BD
             $registration->payments()->forceDelete();
 
             if ($registration->scolarity) {
@@ -492,18 +487,42 @@ class RegistrationController extends Controller
     // ═══════════════════════════════════════════════════════════
     public function generateForm(Request $request, int $id)
     {
-        $registration = Registration::with(['student', 'formation', 'campus', 'academicYear', 'scolarity'])->findOrFail($id);
+        $user = $request->user();
 
-        // ✅ Policy
-        $this->authorize('view', $registration);
+        $registration = Registration::with([
+            'student',
+            'formation',
+            'campus',
+            'academicYear',
+            'scolarity',
+            'createdBy:id,last_name,first_name',
+        ])->findOrFail($id);
 
-        $actualTuition = $registration->scolarity ? $registration->scolarity->tuition_fees : $registration->formation->tuition_fees;
-        $actualPaid = $registration->scolarity ? $registration->scolarity->amount_paid : 0;
-        $actualStatus = $registration->scolarity ? $registration->scolarity->status : 'unpaid';
+        if (in_array($user->role, ['admin_campus', 'secretary']) && $registration->campus_id !== $user->campus_id) {
+            return response()->json(['message' => 'Accès non autorisé à ce campus'], 403);
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // ✅ ÉTAPE 1 : Le fichier existe déjà sur le disque ?
+        // ═══════════════════════════════════════════════════════════
+        if ($this->pdfStorage->exists($registration->pdf_path)) {
+            $content = $this->pdfStorage->get($registration->pdf_path);
+
+            return response($content)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'inline; filename="fiche-inscription-' . $registration->student->registration_number . '.pdf"');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // ✅ ÉTAPE 2 : Générer + stocker + enregistrer le path
+        // ═══════════════════════════════════════════════════════════
+        $actualTuition = $registration->scolarity?->tuition_fees ?? $registration->formation->tuition_fees;
+        $actualPaid    = $registration->scolarity?->amount_paid ?? 0;
+        $actualStatus  = $registration->scolarity?->status ?? 'unpaid';
 
         $qrData = [
             'matricule'         => $registration->student->registration_number,
-            'name'              => $registration->student->first_name . ' ' . $registration->student->last_name,
+            'name'              => $registration->student->last_name . ' ' . $registration->student->first_name,
             'formation'         => $registration->formation->name,
             'formation_code'    => $registration->formation->abbreviation,
             'campus'            => $registration->campus?->name ?? 'CAB Informatique',
@@ -518,7 +537,10 @@ class RegistrationController extends Controller
         $secureQRData = generateSecureQRData('registration', $qrData);
 
         try {
-            $qrCodeRaw = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(100)->errorCorrection('H')->generate($secureQRData);
+            $qrCodeRaw = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
+                ->size(100)
+                ->errorCorrection('H')
+                ->generate($secureQRData);
             $qrCodeBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrCodeRaw);
         } catch (\Exception $e) {
             $qrCodeBase64 = null;
@@ -527,9 +549,17 @@ class RegistrationController extends Controller
 
         $pdfContent = $this->pdfService->generateRegistrationForm($registration, $qrCodeBase64);
 
+        $newPath = $this->pdfStorage->registrationPath($registration);
+        $this->pdfStorage->store($newPath, $pdfContent);
+
+        $registration->update([
+            'pdf_path'         => $newPath,
+            'pdf_generated_at' => now(),
+        ]);
+
         return response($pdfContent)
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'attachment; filename="fiche-inscription-' . $registration->student->registration_number . '.pdf"');
+            ->header('Content-Disposition', 'inline; filename="fiche-inscription-' . $registration->student->registration_number . '.pdf"');
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -539,19 +569,16 @@ class RegistrationController extends Controller
     {
         $user = $request->user();
 
-        // ✅ Vérification : admin_campus / secrétaire limités à leur campus
         if (in_array($user->role, ['admin_campus', 'secretary'])) {
             if ($campusId !== (int) $user->campus_id) {
                 return response()->json(['message' => 'Accès non autorisé à ce campus'], 403);
             }
         }
 
-        // Scolarité
         $scolarityIncome  = FinancialTransaction::where('campus_id', $campusId)->where('type', 'income')->sum('amount');
         $scolarityExpense = FinancialTransaction::where('campus_id', $campusId)->where('type', 'expense')->sum('amount');
         $scolarityBalance = $scolarityIncome - $scolarityExpense;
 
-        // Caisse
         $cashIncome  = CashMovement::where('campus_id', $campusId)->where('type', 'income')->sum('amount');
         $cashExpense = CashMovement::where('campus_id', $campusId)->where('type', 'expense')->sum('amount');
         $cashBalance = $cashIncome - $cashExpense;

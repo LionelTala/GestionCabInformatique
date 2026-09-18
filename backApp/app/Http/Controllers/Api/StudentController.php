@@ -7,6 +7,7 @@ use App\Models\Student;
 use App\Models\Registration;
 use App\Models\Campus;
 use App\Services\ActivityLogService;
+use App\Services\PDFStorageService;  
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -16,7 +17,8 @@ use Throwable;
 class StudentController extends Controller
 {
     public function __construct(
-        private ActivityLogService $activityLogService
+        private ActivityLogService $activityLogService,
+        private PDFStorageService $pdfStorage
     ) {}
 
     // ═══ LISTE DES ÉTUDIANTS ═══
@@ -172,85 +174,124 @@ class StudentController extends Controller
     }
 
     // ═══ MODIFIER LES INFOS PERSONNELLES ═══
-    public function update(Request $request, int $id)
-    {
-        $user = $request->user();
-        $student = Student::findOrFail($id);
+    // ═══ MODIFIER LES INFOS PERSONNELLES ═══
+public function update(Request $request, int $id)
+{
+    $user = $request->user();
+    $student = Student::findOrFail($id);
 
-        if (in_array($user->role, ['admin_campus', 'secretary']) && $student->campus_id !== $user->campus_id) {
-            return response()->json(['message' => 'Accès non autorisé à ce campus'], 403);
-        }
-
-        $validated = $request->validate([
-            'first_name' => 'sometimes|string|max:100',
-            'last_name' => 'sometimes|string|max:100',
-            'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:20',
-            'residence' => 'nullable|string|max:255',
-            'date_of_birth' => 'nullable|date',
-            'highest_diploma' => 'nullable|string|max:255',
-            'place_of_birth' => 'nullable|string|max:255',
-            'diploma_year' => 'nullable|integer|min:1950|max:2030',
-            'languages' => 'nullable|array',
-            'languages.*' => 'in:francais,anglais,autre',
-            'parent_name' => 'nullable|string|max:255',
-            'parent_phone' => 'nullable|string|max:20',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-        ]);
-
-        DB::beginTransaction();
-        try {
-            $oldData = $student->only([
-                'first_name', 'last_name', 'email', 'phone', 'residence', 'date_of_birth',
-                'highest_diploma', 'diploma_year', 'languages', 'parent_name', 'parent_phone', 'photo'
-            ]);
-
-            // ✅ CORRECTION DATE DE NAISSANCE : chaîne vide → null
-            if (isset($validated['date_of_birth']) && $validated['date_of_birth'] === '') {
-                $validated['date_of_birth'] = null;
-            }
-
-            // ✅ CORRECTION LANGUES : Encoder en JSON
-            if (isset($validated['languages']) && is_array($validated['languages'])) {
-                $validated['languages'] = json_encode($validated['languages']);
-            }
-
-            if ($request->hasFile('photo')) {
-                $file = $request->file('photo');
-
-                if ($student->photo && Storage::disk('private')->exists($student->photo)) {
-                    Storage::disk('private')->delete($student->photo);
-                }
-
-                $path = $file->store('students', 'private');
-                $validated['photo'] = $path;
-            }
-
-            $student->update($validated);
-
-            $this->activityLogService->log(
-                action: 'updated',
-                targetType: 'student',
-                targetId: $student->id,
-                targetName: $student->first_name . ' ' . $student->last_name,
-                oldData: $oldData,
-                newData: $validated,
-                changes: 'Modification des informations de ' . $student->first_name . ' ' . $student->last_name,
-                campusId: $student->campus_id
-            );
-
-            DB::commit();
-        } catch (Throwable $e) {
-            DB::rollBack();
-            Log::error('StudentController@update', ['error' => $e->getMessage()]);
-            return response()->json(['message' => 'Erreur lors de la modification : ' . $e->getMessage()], 500);
-        }
-
-        return response()->json([
-            'message' => 'Informations modifiées avec succès',
-            'data' => $student->fresh()
-        ]);
+    if (in_array($user->role, ['admin_campus', 'secretary']) && $student->campus_id !== $user->campus_id) {
+        return response()->json(['message' => 'Accès non autorisé à ce campus'], 403);
     }
+
+    $validated = $request->validate([
+        'first_name' => 'sometimes|string|max:100',
+        'last_name' => 'sometimes|string|max:100',
+        'email' => 'nullable|email|max:255',
+        'phone' => 'nullable|string|max:20',
+        'residence' => 'nullable|string|max:255',
+        'date_of_birth' => 'nullable|date',
+        'place_of_birth' => 'nullable|string|max:255',
+        'highest_diploma' => 'nullable|string|max:255',
+        'diploma_year' => 'nullable|integer|min:1950|max:2030',
+        'languages' => 'nullable|array',
+        'languages.*' => 'in:francais,anglais,autre',
+        'parent_name' => 'nullable|string|max:255',
+        'parent_phone' => 'nullable|string|max:20',
+        'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+    ]);
+
+    DB::beginTransaction();
+    try {
+        $oldData = $student->only([
+            'first_name', 'last_name', 'email', 'phone', 'residence', 'date_of_birth',
+            'place_of_birth', 'highest_diploma', 'diploma_year', 'languages',
+            'parent_name', 'parent_phone', 'photo'
+        ]);
+
+        // ✅ CORRECTION DATE DE NAISSANCE : chaîne vide → null
+        if (isset($validated['date_of_birth']) && $validated['date_of_birth'] === '') {
+            $validated['date_of_birth'] = null;
+        }
+
+        // ✅ CORRECTION LANGUES : Encoder en JSON
+        if (isset($validated['languages']) && is_array($validated['languages'])) {
+            $validated['languages'] = json_encode($validated['languages']);
+        }
+
+        if ($request->hasFile('photo')) {
+            $file = $request->file('photo');
+
+            if ($student->photo && Storage::disk('private')->exists($student->photo)) {
+                Storage::disk('private')->delete($student->photo);
+            }
+
+            $path = $file->store('students', 'private');
+            $validated['photo'] = $path;
+        }
+
+        $student->update($validated);
+
+        // ═══════════════════════════════════════════════════════════
+        // ✅ NOUVEAU : Invalider tous les PDF liés à cet étudiant
+        // ═══════════════════════════════════════════════════════════
+        $this->invalidateStudentPDFs($student);
+
+        $this->activityLogService->log(
+            action: 'updated',
+            targetType: 'student',
+            targetId: $student->id,
+            targetName: $student->first_name . ' ' . $student->last_name,
+            oldData: $oldData,
+            newData: $validated,
+            changes: 'Modification des informations de ' . $student->first_name . ' ' . $student->last_name,
+            campusId: $student->campus_id
+        );
+
+        DB::commit();
+    } catch (Throwable $e) {
+        DB::rollBack();
+        Log::error('StudentController@update', ['error' => $e->getMessage()]);
+        return response()->json(['message' => 'Erreur lors de la modification : ' . $e->getMessage()], 500);
+    }
+
+    return response()->json([
+        'message' => 'Informations modifiées avec succès',
+        'data' => $student->fresh()
+    ]);
+}
+
+/**
+ * ✅ Invalide tous les PDF d'un étudiant :
+ * - Sa ou ses fiches d'inscription
+ * - Tous ses reçus de paiement
+ */
+private function invalidateStudentPDFs(Student $student): void
+{
+    // Recharge avec les relations nécessaires
+    $student->load(['registrations.payments', 'registrations.scolarity']);
+
+    foreach ($student->registrations as $registration) {
+        // ✅ Supprimer la fiche d'inscription du disque
+        $this->pdfStorage->deleteRegistrationPDF($registration);
+
+        // ✅ Mettre à null le chemin en BD
+        $registration->update([
+            'pdf_path' => null,
+            'pdf_generated_at' => null,
+        ]);
+
+        // ✅ Supprimer tous les reçus liés
+        foreach ($registration->payments as $payment) {
+            $this->pdfStorage->deleteReceiptPDF($payment);
+
+            $payment->update([
+                'receipt_path' => null,
+                'receipt_generated_at' => null,
+            ]);
+        }
+    }
+}
 
     // ═══ SERVIR LA PHOTO ═══
     public function getPhoto(Request $request, int $id)

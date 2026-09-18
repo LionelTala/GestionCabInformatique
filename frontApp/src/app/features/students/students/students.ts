@@ -46,7 +46,7 @@ export class StudentsComponent implements OnInit {
     { value: 'anglais', label: 'Anglais' },
     { value: 'autre', label: 'Autre' },
   ];
-  diplomaOptions = ['Aucun', 'BEPC / Brevet', 'Baccalauréat', 'BTS / DUT', 'Licence', 'Master', 'Doctorat', 'Autre'];
+  diplomaOptions = ['Aucun', 'BEPC / Brevet','Probatoire', 'Baccalauréat', 'BTS / DUT', 'Licence', 'Master', 'Doctorat', 'Autre'];
 
   // Filtres
   filters = signal({

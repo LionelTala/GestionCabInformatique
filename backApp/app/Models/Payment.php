@@ -20,6 +20,8 @@ class Payment extends Model
         'reference',
         'status',
         'created_by',
+        'receipt_path',          
+    'receipt_generated_at', 
     ];
 
     // Modernisation optionnelle : $dates est déprécié au profit de casts
@@ -29,6 +31,7 @@ class Payment extends Model
             'amount' => 'decimal:2',
             'payment_date' => 'date',
             'deleted_at' => 'datetime', 
+            'receipt_generated_at' => 'datetime',
         ];
     }
 

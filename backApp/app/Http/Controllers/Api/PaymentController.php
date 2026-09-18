@@ -8,6 +8,7 @@ use App\Models\Registration;
 use App\Models\FinancialTransaction;
 use App\Services\ActivityLogService;
 use App\Services\PDFService;
+use App\Services\PDFStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -17,7 +18,8 @@ class PaymentController extends Controller
 {
     public function __construct(
         private ActivityLogService $activityLogService,
-        private PDFService $pdfService
+        private PDFService $pdfService,
+        private PDFStorageService $pdfStorage
     ) {}
 
     // ═══════════════════════════════════════════════════════════
@@ -36,26 +38,20 @@ class PaymentController extends Controller
             'registration.academicYear:id,label',
         ])->orderBy('payment_date', 'desc');
 
-        // ─── 1. SCOPE PAR RÔLE ────────────────────────────────
-        // ✅ Secrétaire ET admin_campus : tout leur campus
         if (in_array($user->role, ['admin_campus', 'secretary'])) {
             $query->where('campus_id', $user->campus_id);
-        }
-        // ✅ Admin global / super : tout, filtrable par campus
-        elseif (in_array($user->role, ['super_admin', 'admin_global'])) {
+        } elseif (in_array($user->role, ['super_admin', 'admin_global'])) {
             if ($request->filled('campus_id')) {
                 $query->where('campus_id', $request->integer('campus_id'));
             }
         }
 
-        // ─── 2. FILTRE PÉRIODE ────────────────────────────────
         $period = $request->get('period', 'today');
         [$dateFrom, $dateTo] = $this->resolvePeriod($period, $request);
 
         if ($dateFrom) $query->whereDate('payment_date', '>=', $dateFrom);
         if ($dateTo)   $query->whereDate('payment_date', '<=', $dateTo);
 
-        // ─── 3. FILTRES ───────────────────────────────────────
         if ($request->filled('formation_id')) {
             $query->whereHas('registration', function ($q) use ($request) {
                 $q->where('formation_id', $request->integer('formation_id'));
@@ -71,7 +67,6 @@ class PaymentController extends Controller
             });
         }
 
-        // ─── 4. STATS DE LA PÉRIODE ───────────────────────────
         $totalAmount = (clone $query)->sum('amount');
         $totalCount  = (clone $query)->count();
 
@@ -162,6 +157,10 @@ class PaymentController extends Controller
                 'created_by'      => $user->id,
             ]);
 
+            // ✅ Invalider la fiche d'inscription (le solde a changé)
+            $this->pdfStorage->deleteRegistrationPDF($registration);
+            $registration->update(['pdf_path' => null, 'pdf_generated_at' => null]);
+
             $studentName = $registration->student->first_name . ' ' . $registration->student->last_name;
             $this->activityLogService->log(
                 action: 'created',
@@ -193,7 +192,6 @@ class PaymentController extends Controller
     {
         $payment = Payment::with(['registration.student', 'registration.scolarity'])->findOrFail($id);
 
-        // ✅ Policy : secrétaire ne peut supprimer QUE ses propres paiements
         $this->authorize('delete', $payment);
 
         $user = $request->user();
@@ -226,6 +224,16 @@ class PaymentController extends Controller
                 'created_by'      => $user->id,
             ]);
 
+            // ✅ Supprimer le PDF du reçu du disque
+            $this->pdfStorage->deleteReceiptPDF($payment);
+
+            // ✅ Invalider la fiche d'inscription (le solde a changé)
+            $registration = $payment->registration;
+            $this->pdfStorage->deleteRegistrationPDF($registration);
+            $registration->update(['pdf_path' => null, 'pdf_generated_at' => null]);
+
+            // ✅ Supprimer le paiement (soft delete)
+            $payment->update(['receipt_path' => null, 'receipt_generated_at' => null]);
             $payment->delete();
 
             DB::commit();
@@ -258,7 +266,6 @@ class PaymentController extends Controller
                 });
             });
 
-        // ✅ Secrétaire + admin_campus : leur campus
         if (in_array($user->role, ['admin_campus', 'secretary'])) {
             $registrations->where('campus_id', $user->campus_id);
         }
@@ -268,7 +275,7 @@ class PaymentController extends Controller
                 return [
                     'id'           => $reg->id,
                     'matricule'    => $reg->student->registration_number,
-                    'name'         => $reg->student->first_name . ' ' . $reg->student->last_name,
+                    'name'         => $reg->student->last_name . ' ' . $reg->student->first_name,
                     'formation'    => $reg->formation->name,
                     'tuition_fees' => $reg->scolarity?->tuition_fees ?? $reg->formation->tuition_fees,
                     'amount_paid'  => $reg->scolarity?->amount_paid ?? 0,
@@ -287,22 +294,55 @@ class PaymentController extends Controller
             'registration.student',
             'registration.formation',
             'registration.campus',
-            'registration.academicYear'
+            'registration.academicYear',
+            'registration.scolarity',
+            'campus',
+            'createdBy:id,last_name,first_name',
         ])->findOrFail($id);
 
-        // ✅ Policy : secrétaire peut télécharger N'IMPORTE QUEL reçu de son campus
         $this->authorize('view', $payment);
 
         $user = $request->user();
 
+        // ═══════════════════════════════════════════════════════════
+        // ✅ ÉTAPE 1 : Le fichier existe déjà ?
+        // ═══════════════════════════════════════════════════════════
+        if ($this->pdfStorage->exists($payment->receipt_path)) {
+            $content = $this->pdfStorage->get($payment->receipt_path);
+
+            return response($content)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'inline; filename="recu-' . $payment->reference . '.pdf"');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // ✅ ÉTAPE 2 : Générer + stocker + enregistrer
+        // ═══════════════════════════════════════════════════════════
         $qrUrl = generatePaymentQRData($payment, $payment->registration->student, $payment->registration);
-        $qrCodeRaw = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(100)->errorCorrection('H')->generate($qrUrl);
-        $qrCodeBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrCodeRaw);
+
+        try {
+            $qrCodeRaw = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
+                ->size(100)
+                ->errorCorrection('H')
+                ->generate($qrUrl);
+            $qrCodeBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrCodeRaw);
+        } catch (\Exception $e) {
+            $qrCodeBase64 = null;
+            Log::error('QR Code generation failed: ' . $e->getMessage());
+        }
 
         $pdfContent = $this->pdfService->generatePaymentReceipt($payment, $qrCodeBase64, $user);
 
+        $newPath = $this->pdfStorage->receiptPath($payment);
+        $this->pdfStorage->store($newPath, $pdfContent);
+
+        $payment->update([
+            'receipt_path'         => $newPath,
+            'receipt_generated_at' => now(),
+        ]);
+
         return response($pdfContent)
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'attachment; filename="recu-' . $payment->reference . '.pdf"');
+            ->header('Content-Disposition', 'inline; filename="recu-' . $payment->reference . '.pdf"');
     }
 }
