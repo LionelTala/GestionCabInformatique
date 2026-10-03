@@ -43,6 +43,10 @@ class CashMovementController extends Controller
             if ($request->filled('campus_id')) {
                 $query->where('campus_id', $request->integer('campus_id'));
             }
+            // ✅ NOUVEAU : filtre par secrétaire
+            if ($request->filled('created_by')) {
+                $query->where('created_by', $request->integer('created_by'));
+            }
         }
 
         // ─── FILTRE TYPE ───────────────────────────────────
@@ -284,8 +288,14 @@ class CashMovementController extends Controller
             $query->where('created_by', $user->id)->where('campus_id', $user->campus_id);
         } elseif ($user->role === 'admin_campus') {
             $query->where('campus_id', $user->campus_id);
-        } elseif (in_array($user->role, ['super_admin', 'admin_global']) && $request->filled('campus_id')) {
-            $query->where('campus_id', $request->integer('campus_id'));
+        } elseif (in_array($user->role, ['super_admin', 'admin_global'])) {
+            if ($request->filled('campus_id')) {
+                $query->where('campus_id', $request->integer('campus_id'));
+            }
+            // ✅ NOUVEAU : filtre par secrétaire
+            if ($request->filled('created_by')) {
+                $query->where('created_by', $request->integer('created_by'));
+            }
         }
 
         // Totaux
@@ -357,4 +367,39 @@ class CashMovementController extends Controller
             default      => [$today, $today],
         };
     }
+    // ═══════════════════════════════════════════════════════════
+// ═══ LISTE DES SECRÉTAIRES (pour filtres admin) ═══
+// ═══════════════════════════════════════════════════════════
+public function secretaries(Request $request)
+{
+    $user = $request->user();
+
+    // ✅ Réservé aux admins globaux
+    if (!in_array($user->role, ['super_admin', 'admin_global'])) {
+        return response()->json(['message' => 'Accès refusé'], 403);
+    }
+
+    $query = \App\Models\User::query()
+        ->where('role', 'secretary')
+        ->where('is_active', true)
+        ->select('id', 'first_name', 'last_name', 'campus_id')
+        ->with('campus:id,name');
+
+    // ✅ Si un campus est filtré, ne renvoyer que ses secrétaires
+    if ($request->filled('campus_id')) {
+        $query->where('campus_id', $request->integer('campus_id'));
+    }
+
+    $secretaries = $query->orderBy('first_name')->get()
+        ->map(fn ($s) => [
+            'id'          => $s->id,
+            'first_name'  => $s->first_name,
+            'last_name'   => $s->last_name,
+            'full_name'   => trim($s->first_name . ' ' . $s->last_name),
+            'campus_id'   => $s->campus_id,
+            'campus_name' => $s->campus?->name,
+        ]);
+
+    return response()->json(['data' => $secretaries]);
+}
 }

@@ -229,6 +229,7 @@ Route::prefix('v1')->group(function () {
         Route::prefix('cash-movements')->group(function () {
             // ⚠️ Routes statiques AVANT /{id}
             Route::get('/summary',    [CashMovementController::class, 'summary']);
+            Route::get('secretaries', [CashMovementController::class, 'secretaries']);
             Route::get('/categories', [CashMovementController::class, 'categories']);
 
             Route::get('/',           [CashMovementController::class, 'index']);
